@@ -1,0 +1,107 @@
+import React, {useEffect, useRef} from 'react';
+import {StatusBar} from 'react-native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {
+  NavigationContainer,
+  NavigationContainerRef,
+} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import notifee, {EventType} from '@notifee/react-native';
+
+import {HomeScreen} from './src/screens/HomeScreen';
+import {AddPlantScreen} from './src/screens/AddPlantScreen';
+import {PlantDetailScreen} from './src/screens/PlantDetailScreen';
+import {SettingsScreen} from './src/screens/SettingsScreen';
+import {
+  requestPermissions,
+  setupNotificationChannel,
+} from './src/utils/notifications';
+
+export type RootStackParamList = {
+  Home: undefined;
+  AddPlant: undefined;
+  PlantDetail: {plantId: string};
+  Settings: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Handle notification press when app is in background/quit
+notifee.onBackgroundEvent(async ({type, detail}) => {
+  if (type === EventType.PRESS && detail.notification?.data?.plantId) {
+    // Navigation happens after app resumes via getInitialNotification in App
+  }
+});
+
+function App(): React.JSX.Element {
+  const navigationRef =
+    useRef<NavigationContainerRef<RootStackParamList>>(null);
+
+  useEffect(() => {
+    // Request permissions and setup channel on mount
+    setupNotificationChannel();
+    requestPermissions();
+
+    // Handle notification press while app is in foreground
+    const unsubscribe = notifee.onForegroundEvent(({type, detail}) => {
+      if (type === EventType.PRESS && detail.notification?.data?.plantId) {
+        const plantId = detail.notification.data.plantId as string;
+        navigationRef.current?.navigate('PlantDetail', {plantId});
+      }
+    });
+
+    // Handle notification press that opened app from background/quit
+    notifee.getInitialNotification().then(initialNotification => {
+      if (initialNotification?.notification?.data?.plantId) {
+        const plantId = initialNotification.notification.data.plantId as string;
+        // Small delay to let navigation be ready
+        setTimeout(() => {
+          navigationRef.current?.navigate('PlantDetail', {plantId});
+        }, 500);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer ref={navigationRef}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f1f8e9" />
+        <Stack.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            headerStyle: {backgroundColor: '#f1f8e9'},
+            headerTintColor: '#1b5e20',
+            headerTitleStyle: {fontWeight: '700'},
+            contentStyle: {backgroundColor: '#f1f8e9'},
+          }}>
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{headerShown: false}}
+          />
+          <Stack.Screen
+            name="AddPlant"
+            component={AddPlantScreen}
+            options={{title: 'New Plant'}}
+          />
+          <Stack.Screen
+            name="PlantDetail"
+            component={PlantDetailScreen}
+            options={{title: 'Plant Details'}}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{title: 'Settings'}}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
+  );
+}
+
+export default App;
