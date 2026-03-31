@@ -73,3 +73,7 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Release signing — never commit these
+android/app/thryveo-release.keystore
+android/gradle.properties

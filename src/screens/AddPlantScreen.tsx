@@ -3,6 +3,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  PermissionsAndroid,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -28,12 +29,22 @@ export const AddPlantScreen: React.FC = () => {
     Alert.alert('Add Photo', 'Choose a source', [
       {
         text: 'Camera',
-        onPress: () =>
+        onPress: async () => {
+          if (Platform.OS === 'android') {
+            const granted = await PermissionsAndroid.request(
+              PermissionsAndroid.PERMISSIONS.CAMERA,
+            );
+            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+              Alert.alert('Permission required', 'Camera permission is needed to take a photo.');
+              return;
+            }
+          }
           launchCamera({mediaType: 'photo', quality: 0.7}, res => {
             if (res.assets?.[0]?.uri) {
               setPhotoUri(res.assets[0].uri);
             }
-          }),
+          });
+        },
       },
       {
         text: 'Photo Library',

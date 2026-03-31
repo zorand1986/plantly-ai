@@ -86,6 +86,24 @@ export async function updatePlant(updated: Plant): Promise<void> {
   }
 }
 
+export async function exportAllData(): Promise<{json: string; filename: string}> {
+  const [plants, settings] = await Promise.all([getPlants(), getSettings()]);
+  const json = JSON.stringify({version: 1, plants, settings}, null, 2);
+  const filename = `thryveo-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  return {json, filename};
+}
+
+export async function importAllData(json: string): Promise<void> {
+  const parsed = JSON.parse(json);
+  if (!parsed.plants || !Array.isArray(parsed.plants)) {
+    throw new Error('Invalid backup file.');
+  }
+  await AsyncStorage.setItem(PLANTS_KEY, JSON.stringify(parsed.plants));
+  if (parsed.settings) {
+    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed.settings));
+  }
+}
+
 export async function deletePlant(id: string): Promise<void> {
   const plants = await getPlants();
   await savePlants(plants.filter(p => p.id !== id));

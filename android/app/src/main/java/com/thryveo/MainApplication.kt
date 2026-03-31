@@ -1,4 +1,4 @@
-package com.plantreminder
+package com.thryveo
 
 import android.app.Application
 import com.facebook.react.PackageList

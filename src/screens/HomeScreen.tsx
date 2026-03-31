@@ -98,7 +98,7 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Plants</Text>
+        <Text style={styles.title}>Dashboard</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.settingsButton}

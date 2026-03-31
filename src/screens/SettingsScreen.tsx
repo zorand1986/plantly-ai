@@ -1,14 +1,16 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   Alert,
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import {writeFile, readFile, DownloadDirectoryPath} from 'react-native-fs';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {
   AppSettings,
   getSettings,
@@ -16,6 +18,8 @@ import {
   getPlants,
   updatePlant,
   applyNotificationTime,
+  exportAllData,
+  importAllData,
 } from '../utils/storage';
 import {
   scheduleNotification,
@@ -103,11 +107,79 @@ const pickerStyles = StyleSheet.create({
 // ── main screen ───────────────────────────────────────────────────────────────
 
 export const SettingsScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [settings, setSettings] = useState<AppSettings>({
     notificationHour: 9,
     notificationMinute: 0,
   });
   const [saved, setSaved] = useState(false);
+  const [devMode, setDevMode] = useState(false);
+  const tapCount = useRef(0);
+  const lastTapTime = useRef(0);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastAnim = useRef(new Animated.Value(-100)).current;
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    setToastVisible(true);
+    toastAnim.setValue(-100);
+    Animated.timing(toastAnim, {toValue: 0, duration: 300, useNativeDriver: true}).start();
+    setTimeout(() => {
+      Animated.timing(toastAnim, {toValue: -100, duration: 300, useNativeDriver: true}).start(
+        () => setToastVisible(false),
+      );
+    }, 2500);
+  }, [toastAnim]);
+
+  const handleTitlePress = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTapTime.current > 1500) {
+      tapCount.current = 0;
+    }
+    lastTapTime.current = now;
+    tapCount.current += 1;
+    if (tapCount.current >= 7) {
+      tapCount.current = 0;
+      setDevMode(prev => {
+        const next = !prev;
+        showToast(next ? 'Developer mode enabled' : 'Developer mode disabled');
+        return next;
+      });
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => (
+        <TouchableOpacity onPress={handleTitlePress} activeOpacity={1}>
+          <Text style={headerStyles.title}>Settings</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, handleTitlePress]);
+
+  const handleExport = async () => {
+    try {
+      const {json} = await exportAllData();
+      const path = `${DownloadDirectoryPath}/thryveo-backup.json`;
+      await writeFile(path, json, 'utf8');
+      Alert.alert('Exported', 'Saved to Downloads/thryveo-backup.json');
+    } catch {
+      Alert.alert('Error', 'Could not export data.');
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const path = `${DownloadDirectoryPath}/thryveo-backup.json`;
+      const json = await readFile(path, 'utf8');
+      await importAllData(json);
+      Alert.alert('Success', 'Data imported! Please restart the app to see your plants.');
+    } catch {
+      Alert.alert('File not found', 'Could not find thryveo-backup.json in your Downloads folder. Please export first.');
+    }
+  };
 
   // Test notification - scheduled at custom time
   const [testHour, setTestHour] = useState(new Date().getHours());
@@ -186,6 +258,12 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {toastVisible && (
+        <Animated.View
+          style={[styles.toast, {transform: [{translateY: toastAnim}]}]}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}>
@@ -228,8 +306,38 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* ── Test notifications ── */}
+        {/* ── Data migration ── */}
         <View style={styles.card}>
+          <Text style={styles.cardTitle}>Data Migration</Text>
+          <Text style={styles.cardSubtitle}>
+            Export your plants to move them to a new install.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={handleExport}
+            activeOpacity={0.8}>
+            <Text style={styles.testButtonEmoji}>📤</Text>
+            <View style={styles.testButtonTextWrap}>
+              <Text style={styles.testButtonTitle}>Export Data</Text>
+              <Text style={styles.testButtonSub}>Saves a .json file to Downloads</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={handleImport}
+            activeOpacity={0.8}>
+            <Text style={styles.testButtonEmoji}>📥</Text>
+            <View style={styles.testButtonTextWrap}>
+              <Text style={styles.testButtonTitle}>Import Data</Text>
+              <Text style={styles.testButtonSub}>Reads thryveo-backup.json from Downloads</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Test notifications (dev mode only) ── */}
+        {devMode && <View style={styles.card}>
           <Text style={styles.cardTitle}>Test Notifications</Text>
           <Text style={styles.cardSubtitle}>
             Verify that notifications work on your device.
@@ -282,11 +390,19 @@ export const SettingsScreen: React.FC = () => {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
+        </View>}
       </ScrollView>
     </SafeAreaView>
   );
 };
+
+const headerStyles = StyleSheet.create({
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1b5e20',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -386,5 +502,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#757575',
     marginTop: 2,
+  },
+  toast: {
+    position: 'absolute',
+    top: 16,
+    alignSelf: 'center',
+    backgroundColor: '#1b5e20',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    zIndex: 100,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
