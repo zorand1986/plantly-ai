@@ -69,6 +69,24 @@ export const PlantDetailScreen: React.FC = () => {
   const [editingName, setEditingName] = useState(false);
   const [plantNameInput, setPlantNameInput] = useState('');
 
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setToastVisible(true);
+    toastAnim.setValue(-100);
+    Animated.timing(toastAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    setTimeout(() => {
+      Animated.timing(toastAnim, {
+        toValue: -100,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setToastVisible(false));
+    }, 2500);
+  };
+
   const loadPlant = useCallback(async () => {
     const plants = await getPlants();
     const found = plants.find(p => p.id === plantId) ?? null;
@@ -96,10 +114,7 @@ export const PlantDetailScreen: React.FC = () => {
       updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
-      Alert.alert(
-        'Postponed',
-        `Reminder moved to ${formatDate(newNextReminder)}.`,
-      );
+      showToast(`Reminder moved to ${formatDate(newNextReminder)}.`);
     } finally {
       setSaving(false);
     }
@@ -123,22 +138,7 @@ export const PlantDetailScreen: React.FC = () => {
       updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
-      setToastMessage(
-        `Great job! Next watering: ${formatDate(newNextReminder)}`,
-      );
-      setToastVisible(true);
-      Animated.timing(toastAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-      setTimeout(() => {
-        Animated.timing(toastAnim, {
-          toValue: -100,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => setToastVisible(false));
-      }, 2500);
+      showToast(`Great job! Next watering: ${formatDate(newNextReminder)}`);
     } finally {
       setSaving(false);
     }
@@ -148,7 +148,7 @@ export const PlantDetailScreen: React.FC = () => {
     if (!plant) return;
     const days = parseInt(intervalDays, 10);
     if (isNaN(days) || days < 1) {
-      Alert.alert('Invalid interval', 'Please enter a valid number of days.');
+      showToast('Please enter a valid number of days.');
       return;
     }
     setSaving(true);
@@ -163,7 +163,7 @@ export const PlantDetailScreen: React.FC = () => {
       updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
-      Alert.alert('Saved', 'Watering interval updated.');
+      showToast('Watering interval updated.');
     } finally {
       setSaving(false);
     }
@@ -173,7 +173,7 @@ export const PlantDetailScreen: React.FC = () => {
     if (!plant) return;
     const trimmed = plantNameInput.trim();
     if (!trimmed) {
-      Alert.alert('Invalid name', 'Please enter a plant name.');
+      showToast('Please enter a plant name.');
       return;
     }
     setSaving(true);

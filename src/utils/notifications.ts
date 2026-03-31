@@ -45,6 +45,9 @@ export async function scheduleNotification(plant: Plant): Promise<string> {
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp: safeFireAt,
+    alarmManager: {
+      allowWhileIdle: true,
+    },
   };
 
   const id = await notifee.createTriggerNotification(
@@ -107,6 +110,9 @@ export async function sendTestNotificationAt(
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
     timestamp: safeTs,
+    alarmManager: {
+      allowWhileIdle: true,
+    },
   };
 
   const id = await notifee.createTriggerNotification(
