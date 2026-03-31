@@ -8,23 +8,55 @@ interface Props {
 }
 
 function formatLastWatered(timestamp: number): string {
-  const now = Date.now();
-  const diffMs = now - timestamp;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const now = new Date();
+  const watered = new Date(timestamp);
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
+  const todayStr = now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (watered.toDateString() === todayStr) return 'Today';
+  if (watered.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+  const nowMidnight = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const wateredMidnight = new Date(
+    watered.getFullYear(),
+    watered.getMonth(),
+    watered.getDate(),
+  );
+  const diffDays = Math.round(
+    (nowMidnight.getTime() - wateredMidnight.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
   if (diffDays < 7) return `${diffDays} days ago`;
-  return new Date(timestamp).toLocaleDateString(undefined, {
+  return watered.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
   });
 }
 
+function diffCalendarDays(nextReminder: number): number {
+  const now = new Date();
+  const todayMidnight = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime();
+  const reminderDate = new Date(nextReminder);
+  const reminderMidnight = new Date(
+    reminderDate.getFullYear(),
+    reminderDate.getMonth(),
+    reminderDate.getDate(),
+  ).getTime();
+  return Math.round((reminderMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+}
+
 function formatDaysLeft(nextReminder: number): string {
-  const now = Date.now();
-  const diffMs = nextReminder - now;
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = diffCalendarDays(nextReminder);
 
   if (diffDays < 0) {
     return 'Overdue!';
@@ -39,8 +71,7 @@ function formatDaysLeft(nextReminder: number): string {
 }
 
 function getStatusColor(nextReminder: number): string {
-  const now = Date.now();
-  const diffDays = Math.ceil((nextReminder - now) / (1000 * 60 * 60 * 24));
+  const diffDays = diffCalendarDays(nextReminder);
   if (diffDays < 0) return '#e53935';
   if (diffDays === 0) return '#fb8c00';
   if (diffDays <= 2) return '#fdd835';
@@ -57,14 +88,15 @@ export const PlantCard: React.FC<Props> = ({plant, onPress}) => {
       style={styles.card}
       onPress={() => onPress(plant)}
       activeOpacity={0.8}>
-      <View style={styles.imageContainer}>
-        {plant.photoUri ? (
-          <Image source={{uri: plant.photoUri}} style={styles.image} />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderEmoji}>🌱</Text>
-          </View>
-        )}
+      {plant.photoUri ? (
+        <Image source={{uri: plant.photoUri}} style={styles.image} />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Text style={styles.placeholderEmoji}>🌱</Text>
+        </View>
+      )}
+      <View style={[styles.badge, {backgroundColor: statusColor}]}>
+        <Text style={styles.badgeText}>{daysLabel}</Text>
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
@@ -75,76 +107,71 @@ export const PlantCard: React.FC<Props> = ({plant, onPress}) => {
         </Text>
         <Text style={styles.lastWatered}>Last watered: {lastWateredLabel}</Text>
       </View>
-      <View style={[styles.badge, {backgroundColor: statusColor}]}>
-        <Text style={styles.badgeText}>{daysLabel}</Text>
-      </View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
+    margin: 4,
     padding: 12,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
   },
-  imageContainer: {
-    marginRight: 14,
-  },
   image: {
-    width: 60,
-    height: 60,
+    width: '100%',
+    aspectRatio: 1,
     borderRadius: 12,
+    marginBottom: 8,
   },
   imagePlaceholder: {
-    width: 60,
-    height: 60,
+    width: '100%',
+    aspectRatio: 1,
     borderRadius: 12,
     backgroundColor: '#e8f5e9',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 8,
   },
   placeholderEmoji: {
-    fontSize: 30,
-  },
-  info: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1b5e20',
-    marginBottom: 4,
-  },
-  interval: {
-    fontSize: 13,
-    color: '#757575',
-  },
-  lastWatered: {
-    fontSize: 11,
-    color: '#9e9e9e',
-    marginTop: 2,
+    fontSize: 40,
   },
   badge: {
     borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginLeft: 8,
-    minWidth: 70,
+    paddingVertical: 4,
+    marginBottom: 8,
+    alignSelf: 'stretch',
     alignItems: 'center',
   },
   badgeText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '700',
+  },
+  info: {
+    alignSelf: 'stretch',
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1b5e20',
+    marginBottom: 2,
+  },
+  interval: {
+    fontSize: 12,
+    color: '#757575',
+  },
+  lastWatered: {
+    fontSize: 11,
+    color: '#9e9e9e',
+    marginTop: 2,
   },
 });

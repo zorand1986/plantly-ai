@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {FlatList, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
@@ -8,6 +8,71 @@ import {PlantCard} from '../components/PlantCard';
 import {RootStackParamList} from '../../App';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
+const ICON_COLOR = '#2e7d32';
+const TOOTH_COUNT = 8;
+
+const SettingsIcon: React.FC = () => {
+  const size = 20;
+  const center = size / 2;
+  const ringOuter = 8;
+  const ringInner = 5;
+  const toothW = 3;
+  const toothH = 2.5;
+  const toothR = ringOuter + 0.5;
+
+  return (
+    <View style={{width: size, height: size}}>
+      {/* Outer ring */}
+      <View
+        style={{
+          position: 'absolute',
+          width: ringOuter * 2,
+          height: ringOuter * 2,
+          borderRadius: ringOuter,
+          borderWidth: 2,
+          borderColor: ICON_COLOR,
+          top: center - ringOuter,
+          left: center - ringOuter,
+        }}
+      />
+      {/* Inner circle (hole) */}
+      <View
+        style={{
+          position: 'absolute',
+          width: ringInner * 2,
+          height: ringInner * 2,
+          borderRadius: ringInner,
+          backgroundColor: '#f1f8e9',
+          top: center - ringInner,
+          left: center - ringInner,
+        }}
+      />
+      {/* Teeth */}
+      {Array.from({length: TOOTH_COUNT}).map((_, i) => {
+        const angle = (i * 360) / TOOTH_COUNT;
+        const rad = (angle * Math.PI) / 180;
+        const tx = center + toothR * Math.sin(rad) - toothW / 2;
+        const ty = center - toothR * Math.cos(rad) - toothH / 2;
+        return (
+          <View
+            key={String(i)}
+            style={{
+              position: 'absolute',
+              width: toothW,
+              height: toothH,
+              backgroundColor: ICON_COLOR,
+              borderRadius: 0.5,
+              left: tx,
+              top: ty,
+              transform: [{rotate: `${angle}deg`}],
+            }}
+          />
+        );
+      })}
+    </View>
+  );
+};
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
@@ -39,7 +104,7 @@ export const HomeScreen: React.FC = () => {
             style={styles.settingsButton}
             onPress={() => navigation.navigate('Settings')}
             activeOpacity={0.8}>
-            <Text style={styles.settingsButtonText}>⚙️</Text>
+            <SettingsIcon />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addButton}
@@ -62,10 +127,12 @@ export const HomeScreen: React.FC = () => {
         <FlatList
           data={plants}
           keyExtractor={item => item.id}
+          numColumns={2}
           renderItem={({item}) => (
             <PlantCard plant={item} onPress={handleCardPress} />
           )}
           contentContainerStyle={styles.list}
+          columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -100,12 +167,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#c8e6c9',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  settingsButtonText: {
-    fontSize: 18,
   },
   addButton: {
     backgroundColor: '#388e3c',
@@ -119,8 +183,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   list: {
+    paddingHorizontal: 12,
     paddingVertical: 8,
     paddingBottom: 24,
+  },
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   emptyState: {
     flex: 1,

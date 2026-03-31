@@ -1,6 +1,7 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState, useRef} from 'react';
 import {
   Alert,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -27,6 +28,7 @@ import {
   computeNextReminder,
 } from '../utils/storage';
 import {scheduleNotification, cancelNotification} from '../utils/notifications';
+import {launchImageLibrary} from 'react-native-image-picker';
 import {RootStackParamList} from '../../App';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'PlantDetail'>;
@@ -61,6 +63,11 @@ export const PlantDetailScreen: React.FC = () => {
   const [plant, setPlant] = useState<Plant | null>(null);
   const [intervalDays, setIntervalDays] = useState('');
   const [saving, setSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastAnim = useRef(new Animated.Value(-100)).current;
+  const [editingName, setEditingName] = useState(false);
+  const [plantNameInput, setPlantNameInput] = useState('');
 
   const loadPlant = useCallback(async () => {
     const plants = await getPlants();
@@ -68,6 +75,7 @@ export const PlantDetailScreen: React.FC = () => {
     if (found) {
       setPlant(found);
       setIntervalDays(String(found.intervalDays));
+      setPlantNameInput(found.name);
     }
   }, [plantId]);
 
@@ -115,10 +123,22 @@ export const PlantDetailScreen: React.FC = () => {
       updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
-      Alert.alert(
-        'Great job!',
-        `Next watering: ${formatDate(newNextReminder)}`,
+      setToastMessage(
+        `Great job! Next watering: ${formatDate(newNextReminder)}`,
       );
+      setToastVisible(true);
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      setTimeout(() => {
+        Animated.timing(toastAnim, {
+          toValue: -100,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => setToastVisible(false));
+      }, 2500);
     } finally {
       setSaving(false);
     }
@@ -147,6 +167,40 @@ export const PlantDetailScreen: React.FC = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveName = async () => {
+    if (!plant) return;
+    const trimmed = plantNameInput.trim();
+    if (!trimmed) {
+      Alert.alert('Invalid name', 'Please enter a plant name.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated: Plant = {...plant, name: trimmed};
+      await updatePlant(updated);
+      setPlant(updated);
+      setEditingName(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePhoto = () => {
+    launchImageLibrary({mediaType: 'photo', quality: 0.7}, async res => {
+      if (res.didCancel || !res.assets || !res.assets[0]?.uri) return;
+      const newPhotoUri = res.assets[0].uri;
+      if (!plant) return;
+      setSaving(true);
+      try {
+        const updated: Plant = {...plant, photoUri: newPhotoUri};
+        await updatePlant(updated);
+        setPlant(updated);
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const handleDelete = () => {
@@ -185,6 +239,12 @@ export const PlantDetailScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {toastVisible && (
+        <Animated.View
+          style={[styles.toast, {transform: [{translateY: toastAnim}]}]}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
       <KeyboardAvoidingView
         style={{flex: 1}}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -192,16 +252,70 @@ export const PlantDetailScreen: React.FC = () => {
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}>
           {/* Hero image */}
-          {plant.photoUri ? (
-            <Image source={{uri: plant.photoUri}} style={styles.heroImage} />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <Text style={styles.heroEmoji}>🌱</Text>
-            </View>
-          )}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={handleChangePhoto}
+            disabled={saving}
+            style={styles.heroTouchArea}>
+            {plant.photoUri ? (
+              <>
+                <Image
+                  source={{uri: plant.photoUri}}
+                  style={styles.heroImage}
+                />
+                <View style={styles.heroOverlay}>
+                  <Text style={styles.heroOverlayText}>
+                    Tap to change photo
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.heroPlaceholder}>
+                <Text style={styles.heroEmoji}>🌱</Text>
+                <Text style={styles.heroOverlayText}>Tap to add photo</Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
           <View style={styles.body}>
-            <Text style={styles.plantName}>{plant.name}</Text>
+            {editingName ? (
+              <View style={styles.nameEditRow}>
+                <TextInput
+                  style={styles.nameInput}
+                  value={plantNameInput}
+                  onChangeText={setPlantNameInput}
+                  autoFocus
+                  maxLength={50}
+                />
+                <TouchableOpacity
+                  style={styles.saveNameButton}
+                  onPress={handleSaveName}
+                  disabled={saving}
+                  activeOpacity={0.8}>
+                  <Text style={styles.saveNameButtonText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelNameButton}
+                  onPress={() => {
+                    setEditingName(false);
+                    setPlantNameInput(plant?.name ?? '');
+                  }}
+                  disabled={saving}
+                  activeOpacity={0.8}>
+                  <Text style={styles.cancelNameButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  setEditingName(true);
+                  setPlantNameInput(plant?.name ?? '');
+                }}
+                disabled={saving}>
+                <Text style={styles.plantName}>{plant.name} ✎</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Reminder status */}
             <View
@@ -304,6 +418,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f1f8e9',
   },
+  toast: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 999,
+    backgroundColor: '#00e676',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -320,6 +451,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 240,
     resizeMode: 'cover',
+  },
+  heroTouchArea: {
+    position: 'relative',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  heroOverlayText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   heroPlaceholder: {
     width: '100%',
@@ -339,6 +487,50 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1b5e20',
     marginBottom: 16,
+  },
+  nameEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  nameInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1b5e20',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  saveNameButton: {
+    backgroundColor: '#388e3c',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  saveNameButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  cancelNameButton: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  cancelNameButtonText: {
+    color: '#888',
+    fontWeight: '600',
+    fontSize: 14,
   },
   statusCard: {
     borderRadius: 16,
