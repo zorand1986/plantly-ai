@@ -15,6 +15,9 @@ import {SettingsScreen} from './src/screens/SettingsScreen';
 import {
   requestPermissions,
   setupNotificationChannel,
+  ensureExactAlarmPermission,
+  requestBatteryOptimizationExemption,
+  rescheduleAllNotifications,
 } from './src/utils/notifications';
 
 export type RootStackParamList = {
@@ -41,6 +44,15 @@ function App(): React.JSX.Element {
     // Request permissions and setup channel on mount
     setupNotificationChannel();
     requestPermissions();
+
+    // Android: ensure exact-alarm permission is granted (required on API 31+)
+    ensureExactAlarmPermission();
+
+    // Android: request battery optimisation exemption so alarms survive Doze/OEM killers
+    requestBatteryOptimizationExemption();
+
+    // Recover any notifications that may have been lost (e.g. app update, clock change)
+    rescheduleAllNotifications();
 
     // Handle notification press while app is in foreground
     const unsubscribe = notifee.onForegroundEvent(({type, detail}) => {
