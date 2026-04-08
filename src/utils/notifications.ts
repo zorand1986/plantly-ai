@@ -1,10 +1,12 @@
 import notifee, {
   AndroidImportance,
+  AndroidNotificationSetting,
   TimestampTrigger,
   TriggerType,
   EventType,
 } from '@notifee/react-native';
-import {Plant, getSettings, applyNotificationTime} from './storage';
+import {Platform, Alert, Linking} from 'react-native';
+import {Plant, getPlants, updatePlant, getSettings, applyNotificationTime, getTimeForDay} from './storage';
 
 const CHANNEL_ID = 'plant-reminders';
 
@@ -31,13 +33,12 @@ export async function scheduleNotification(plant: Plant): Promise<string> {
     } catch {}
   }
 
-  // Apply the configured notification time to the reminder date
+  // Apply the configured notification time to the reminder date,
+  // honouring any per-day-of-week override.
   const settings = await getSettings();
-  const fireAt = applyNotificationTime(
-    plant.nextReminder,
-    settings.notificationHour,
-    settings.notificationMinute,
-  );
+  const dayOfWeek = new Date(plant.nextReminder).getDay();
+  const {hour, minute} = getTimeForDay(settings, dayOfWeek);
+  const fireAt = applyNotificationTime(plant.nextReminder, hour, minute);
 
   // If the computed time is already in the past, fire 10 seconds from now
   const safeFireAt = fireAt > Date.now() ? fireAt : Date.now() + 10_000;
@@ -142,4 +143,101 @@ export function onNotificationPress(
       handler(detail.notification.data.plantId as string);
     }
   });
+}
+
+/**
+ * Reschedule notifications for all plants. Called after device reboot (via
+ * the headless task) and on app startup to recover from missed reschedulings.
+ * A guard prevents concurrent calls from creating duplicate notifications.
+ */
+let _rescheduling = false;
+
+export async function rescheduleAllNotifications(): Promise<void> {
+  if (_rescheduling) {
+    return;
+  }
+  _rescheduling = true;
+  try {
+    const plants = await getPlants();
+    await Promise.all(
+      plants.map(async plant => {
+        if (!plant.nextReminder) {
+          return;
+        }
+        const id = await scheduleNotification(plant);
+        await updatePlant({...plant, notificationId: id});
+      }),
+    );
+  } finally {
+    _rescheduling = false;
+  }
+}
+
+/**
+ * On Android 12+ (API 31+) exact alarms require explicit user approval.
+ * Check the permission and open the system settings page if it isn't granted.
+ */
+export async function ensureExactAlarmPermission(): Promise<void> {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  const settings = await notifee.getNotificationSettings();
+  if (settings.android.alarm === AndroidNotificationSetting.DISABLED) {
+    Alert.alert(
+      'Alarm permission needed',
+      'To receive plant watering reminders at the right time, please enable "Alarms & Reminders" for this app in Settings.',
+      [
+        {text: 'Open Settings', onPress: () => Linking.openSettings()},
+        {text: 'Later', style: 'cancel'},
+      ],
+    );
+  }
+}
+
+/**
+ * On Android, ask the OS to exempt the app from battery optimisation so that
+ * scheduled alarms can fire even when the phone is idle or in Doze mode.
+ * Also opens the OEM-specific power manager if the device has one
+ * (Samsung, Xiaomi, Huawei, etc.).
+ */
+export async function requestBatteryOptimizationExemption(): Promise<void> {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  try {
+    // Standard Android: check if battery optimisation is restricting the app
+    const batteryOptimizationEnabled =
+      await notifee.isBatteryOptimizationEnabled();
+    if (batteryOptimizationEnabled) {
+      Alert.alert(
+        'Battery optimisation',
+        'To ensure you always receive plant watering reminders, please disable battery optimisation for this app.',
+        [
+          {
+            text: 'Open settings',
+            onPress: () => notifee.openBatteryOptimizationSettings(),
+          },
+          {text: 'Later', style: 'cancel'},
+        ],
+      );
+    }
+
+    // OEM power-manager (Samsung, Xiaomi, OPPO, …) — additional step on those devices
+    const powerInfo = await notifee.getPowerManagerInfo();
+    if (powerInfo.activity) {
+      Alert.alert(
+        'Power manager detected',
+        'Your device has an extra power manager. To guarantee reminders arrive, please whitelist this app.',
+        [
+          {
+            text: 'Open settings',
+            onPress: () => notifee.openPowerManagerSettings(),
+          },
+          {text: 'Later', style: 'cancel'},
+        ],
+      );
+    }
+  } catch {
+    // Silently ignore — not all devices expose this API
+  }
 }

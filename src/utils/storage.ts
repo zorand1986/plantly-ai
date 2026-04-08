@@ -3,16 +3,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const PLANTS_KEY = '@plants';
 const SETTINGS_KEY = '@settings';
 
+export interface DayTimeOverride {
+  hour: number;
+  minute: number;
+}
+
 export interface AppSettings {
   /** Hour of day (0-23) at which notifications fire, default 9 */
   notificationHour: number;
   /** Minute (0-59), default 0 */
   notificationMinute: number;
+  /**
+   * Per-day overrides. Index 0=Sun, 1=Mon, …, 6=Sat.
+   * null means use the default notificationHour/notificationMinute.
+   */
+  dayOverrides: (DayTimeOverride | null)[];
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   notificationHour: 9,
   notificationMinute: 0,
+  dayOverrides: [null, null, null, null, null, null, null],
 };
 
 export async function getSettings(): Promise<AppSettings> {
@@ -40,6 +51,21 @@ export function applyNotificationTime(
   const d = new Date(dateTs);
   d.setHours(hour, minute, 0, 0);
   return d.getTime();
+}
+
+/**
+ * Returns the hour/minute to use for a notification firing on a given day.
+ * @param dayOfWeek 0=Sun, 1=Mon, …, 6=Sat (as returned by Date.getDay())
+ */
+export function getTimeForDay(
+  settings: AppSettings,
+  dayOfWeek: number,
+): {hour: number; minute: number} {
+  const override = settings.dayOverrides?.[dayOfWeek];
+  if (override) {
+    return {hour: override.hour, minute: override.minute};
+  }
+  return {hour: settings.notificationHour, minute: settings.notificationMinute};
 }
 
 export interface Plant {

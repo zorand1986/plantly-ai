@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {version as appVersion} from '../../package.json';
 import {
   Alert,
   Animated,
@@ -13,6 +14,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {
   AppSettings,
+  DayTimeOverride,
   getSettings,
   saveSettings,
   getPlants,
@@ -104,6 +106,139 @@ const pickerStyles = StyleSheet.create({
   },
 });
 
+// ── per-day schedule ─────────────────────────────────────────────────────────
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// Display order: Mon first
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+function DayRow({
+  day,
+  override,
+  defaultHour,
+  defaultMinute,
+  onChange,
+}: {
+  day: number;
+  override: DayTimeOverride | null;
+  defaultHour: number;
+  defaultMinute: number;
+  onChange: (v: DayTimeOverride | null) => void;
+}) {
+  const isCustom = override !== null;
+  return (
+    <View style={dayRowStyles.container}>
+      <View style={dayRowStyles.row}>
+        <Text style={dayRowStyles.dayName}>{DAY_NAMES[day]}</Text>
+        {!isCustom && (
+          <Text style={dayRowStyles.defaultTime}>
+            {formatTime(defaultHour, defaultMinute)}
+          </Text>
+        )}
+        {isCustom && (
+          <Text style={dayRowStyles.customTime}>
+            {formatTime(override.hour, override.minute)}
+          </Text>
+        )}
+        <TouchableOpacity
+          onPress={() =>
+            onChange(
+              isCustom ? null : {hour: defaultHour, minute: defaultMinute},
+            )
+          }
+          style={[dayRowStyles.toggle, isCustom && dayRowStyles.toggleActive]}
+          activeOpacity={0.7}>
+          <Text
+            style={[
+              dayRowStyles.toggleText,
+              isCustom && dayRowStyles.toggleTextActive,
+            ]}>
+            {isCustom ? 'Custom' : 'Default'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {isCustom && (
+        <View style={dayRowStyles.pickerRow}>
+          <NumberPicker
+            label="Hour"
+            value={override.hour}
+            min={0}
+            max={23}
+            onChange={h => onChange({...override, hour: h})}
+          />
+          <Text style={dayRowStyles.colon}>:</Text>
+          <NumberPicker
+            label="Minute"
+            value={override.minute}
+            min={0}
+            max={59}
+            onChange={m => onChange({...override, minute: m})}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
+const dayRowStyles = StyleSheet.create({
+  container: {
+    marginBottom: 12,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dayName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1b5e20',
+    width: 40,
+  },
+  defaultTime: {
+    flex: 1,
+    fontSize: 14,
+    color: '#999',
+  },
+  customTime: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2e7d32',
+  },
+  toggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#e8f5e9',
+  },
+  toggleActive: {
+    backgroundColor: '#2e7d32',
+  },
+  toggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2e7d32',
+  },
+  toggleTextActive: {
+    color: '#fff',
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  colon: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1b5e20',
+    marginBottom: 18,
+  },
+});
+
 // ── main screen ───────────────────────────────────────────────────────────────
 
 export const SettingsScreen: React.FC = () => {
@@ -111,6 +246,7 @@ export const SettingsScreen: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     notificationHour: 9,
     notificationMinute: 0,
+    dayOverrides: [null, null, null, null, null, null, null],
   });
   const [saved, setSaved] = useState(false);
   const [devMode, setDevMode] = useState(false);
@@ -306,6 +442,36 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+        {/* ── Per-day schedule ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Per-Day Schedule</Text>
+          <Text style={styles.cardSubtitle}>
+            Override the notification time for specific days of the week.
+          </Text>
+          {DAY_ORDER.map(day => (
+            <DayRow
+              key={day}
+              day={day}
+              override={settings.dayOverrides?.[day] ?? null}
+              defaultHour={settings.notificationHour}
+              defaultMinute={settings.notificationMinute}
+              onChange={v => {
+                const next = [...(settings.dayOverrides ?? [null, null, null, null, null, null, null])];
+                next[day] = v;
+                setSettings(s => ({...s, dayOverrides: next}));
+              }}
+            />
+          ))}
+          <TouchableOpacity
+            style={[styles.primaryButton, saved && styles.primaryButtonSaved]}
+            onPress={handleSaveDefaultTime}
+            activeOpacity={0.8}>
+            <Text style={styles.primaryButtonText}>
+              {saved ? 'Saved!' : 'Save & Reschedule All'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* ── Data migration ── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Data Migration</Text>
@@ -391,6 +557,8 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
         </View>}
+
+        <Text style={styles.versionText}>v{appVersion}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -517,5 +685,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  versionText: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#aaa',
+    marginTop: 8,
   },
 });
