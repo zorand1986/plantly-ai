@@ -6,6 +6,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Plant, getPlants} from '../utils/storage';
 import {PlantCard} from '../components/PlantCard';
 import {RootStackParamList} from '../../App';
+import {syncWidget, processPendingWaterings} from '../utils/widgetSync';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -87,7 +88,11 @@ export const HomeScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      loadPlants();
+      // Apply any waterings done from the widget while app was closed, then sync
+      processPendingWaterings()
+        .then(loadPlants)
+        .then(syncWidget)
+        .catch(() => {});
     }, [loadPlants]),
   );
 

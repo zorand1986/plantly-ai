@@ -6,6 +6,8 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.thryveo.FilePicker.FilePickerPackage
+import com.thryveo.widget.WidgetDataPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -14,8 +16,8 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          add(WidgetDataPackage())
+          add(FilePickerPackage())
         },
     )
   }

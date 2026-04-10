@@ -9,7 +9,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {writeFile, readFile, DownloadDirectoryPath} from 'react-native-fs';
+import {writeFile, DownloadDirectoryPath} from 'react-native-fs';
+import {NativeModules} from 'react-native';
+
+const {FilePicker} = NativeModules;
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {
@@ -308,12 +311,13 @@ export const SettingsScreen: React.FC = () => {
 
   const handleImport = async () => {
     try {
-      const path = `${DownloadDirectoryPath}/thryveo-backup.json`;
-      const json = await readFile(path, 'utf8');
+      const json: string = await FilePicker.pickJsonFile();
       await importAllData(json);
       Alert.alert('Success', 'Data imported! Please restart the app to see your plants.');
-    } catch {
-      Alert.alert('File not found', 'Could not find thryveo-backup.json in your Downloads folder. Please export first.');
+    } catch (e: any) {
+      if (e?.code !== 'CANCELLED') {
+        Alert.alert('Error', 'Could not read the selected file. Make sure it is a valid Thryveo backup.');
+      }
     }
   };
 

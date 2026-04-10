@@ -1,5 +1,5 @@
 import React, {useEffect, useRef} from 'react';
-import {StatusBar} from 'react-native';
+import {Linking, StatusBar} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {
   NavigationContainer,
@@ -73,8 +73,29 @@ function App(): React.JSX.Element {
       }
     });
 
+    // Handle deep link from widget: thryveo://plant/{plantId}
+    const handleDeepLink = (url: string | null) => {
+      if (!url) return;
+      const match = url.match(/^thryveo:\/\/plant\/(.+)$/);
+      if (match) {
+        const plantId = match[1];
+        setTimeout(() => {
+          navigationRef.current?.navigate('PlantDetail', {plantId});
+        }, 300);
+      }
+    };
+
+    // App opened via deep link from a closed state
+    Linking.getInitialURL().then(handleDeepLink);
+
+    // App brought to foreground via deep link
+    const linkingSubscription = Linking.addEventListener('url', ({url}) =>
+      handleDeepLink(url),
+    );
+
     return () => {
       unsubscribe();
+      linkingSubscription.remove();
     };
   }, []);
 

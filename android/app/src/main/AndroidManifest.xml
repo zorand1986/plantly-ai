@@ -33,6 +33,13 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!-- Deep link from widget: thryveo://plant/{plantId} -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="thryveo" android:host="plant" />
+        </intent-filter>
       </activity>
       <provider
         android:name="androidx.core.content.FileProvider"
@@ -55,6 +62,27 @@
       </receiver>
       <service
         android:name=".BootTaskService"
+        android:exported="false" />
+
+      <!-- Home-screen widget -->
+      <receiver
+        android:name=".widget.PlantWidget"
+        android:exported="true">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+          android:name="android.appwidget.provider"
+          android:resource="@xml/plant_widget_info" />
+      </receiver>
+
+      <service
+        android:name=".widget.PlantWidgetService"
+        android:permission="android.permission.BIND_REMOTEVIEWS"
+        android:exported="true" />
+
+      <receiver
+        android:name=".widget.WaterPlantReceiver"
         android:exported="false" />
     </application>
 </manifest>
