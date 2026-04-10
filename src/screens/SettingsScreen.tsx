@@ -9,7 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {writeFile, readFile, DownloadDirectoryPath} from 'react-native-fs';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {
@@ -298,9 +300,14 @@ export const SettingsScreen: React.FC = () => {
   const handleExport = async () => {
     try {
       const {json} = await exportAllData();
-      const path = `${DownloadDirectoryPath}/thryveo-backup.json`;
-      await writeFile(path, json, 'utf8');
-      Alert.alert('Exported', 'Saved to Downloads/thryveo-backup.json');
+      const path = `${FileSystem.documentDirectory}thryveo-backup.json`;
+      await FileSystem.writeAsStringAsync(path, json, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      await Sharing.shareAsync(path, {
+        mimeType: 'application/json',
+        dialogTitle: 'Save Thryveo backup',
+      });
     } catch {
       Alert.alert('Error', 'Could not export data.');
     }
@@ -308,12 +315,20 @@ export const SettingsScreen: React.FC = () => {
 
   const handleImport = async () => {
     try {
-      const path = `${DownloadDirectoryPath}/thryveo-backup.json`;
-      const json = await readFile(path, 'utf8');
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) {
+        return;
+      }
+      const json = await FileSystem.readAsStringAsync(result.assets[0].uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
       await importAllData(json);
       Alert.alert('Success', 'Data imported! Please restart the app to see your plants.');
     } catch {
-      Alert.alert('File not found', 'Could not find thryveo-backup.json in your Downloads folder. Please export first.');
+      Alert.alert('Error', 'Could not import data. Make sure you selected a valid backup file.');
     }
   };
 

@@ -1,4 +1,65 @@
 {
-  "name": "Thryveo",
-  "displayName": "Thryveo"
+  "expo": {
+    "name": "Thryveo",
+    "slug": "thryveo",
+    "version": "1.2.1",
+    "orientation": "portrait",
+    "icon": "./thryveo-512.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#f1f8e9"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.thryveo",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to take a photo of your plant",
+        "NSPhotoLibraryUsageDescription": "Used to pick a photo of your plant",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./thryveo-512.png",
+        "backgroundColor": "#f1f8e9"
+      },
+      "package": "com.thryveo",
+      "permissions": [
+        "android.permission.NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./thryveo-512.png",
+          "color": "#2e7d32",
+          "defaultChannel": "plant-reminders"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Used to pick a photo of your plant",
+          "cameraPermission": "Used to take a photo of your plant"
+        }
+      ]
+    ],
+    "newArchEnabled": true,
+    "extra": {
+      "eas": {
+        "projectId": "99dc0993-196b-46c0-897c-6cff8c42a059"
+      }
+    }
+  }
 }

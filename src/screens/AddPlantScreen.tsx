@@ -3,9 +3,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  PermissionsAndroid,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,8 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
-import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import {addPlant, computeNextReminder, Plant} from '../utils/storage';
 import {scheduleNotification} from '../utils/notifications';
 
@@ -30,30 +29,31 @@ export const AddPlantScreen: React.FC = () => {
       {
         text: 'Camera',
         onPress: async () => {
-          if (Platform.OS === 'android') {
-            const granted = await PermissionsAndroid.request(
-              PermissionsAndroid.PERMISSIONS.CAMERA,
-            );
-            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-              Alert.alert('Permission required', 'Camera permission is needed to take a photo.');
-              return;
-            }
+          const {status} = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Permission required', 'Camera permission is needed to take a photo.');
+            return;
           }
-          launchCamera({mediaType: 'photo', quality: 0.7}, res => {
-            if (res.assets?.[0]?.uri) {
-              setPhotoUri(res.assets[0].uri);
-            }
+          const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            quality: 0.7,
           });
+          if (!result.canceled && result.assets[0]) {
+            setPhotoUri(result.assets[0].uri);
+          }
         },
       },
       {
         text: 'Photo Library',
-        onPress: () =>
-          launchImageLibrary({mediaType: 'photo', quality: 0.7}, res => {
-            if (res.assets?.[0]?.uri) {
-              setPhotoUri(res.assets[0].uri);
-            }
-          }),
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.7,
+          });
+          if (!result.canceled && result.assets[0]) {
+            setPhotoUri(result.assets[0].uri);
+          }
+        },
       },
       {text: 'Cancel', style: 'cancel'},
     ]);
@@ -84,6 +84,7 @@ export const AddPlantScreen: React.FC = () => {
         intervalDays: days,
         lastWatered: now,
         nextReminder,
+        wateringHistory: [],
       };
 
       const notificationId = await scheduleNotification(plant);

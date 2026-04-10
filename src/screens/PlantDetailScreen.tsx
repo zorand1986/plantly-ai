@@ -1,11 +1,10 @@
-import React, {useCallback, useEffect, useState, useRef} from 'react';
+import React, {useCallback, useState, useRef} from 'react';
 import {
   Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {
   useFocusEffect,
   useNavigation,
@@ -28,7 +28,7 @@ import {
   computeNextReminder,
 } from '../utils/storage';
 import {scheduleNotification, cancelNotification} from '../utils/notifications';
-import {launchImageLibrary} from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import {RootStackParamList} from '../../App';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'PlantDetail'>;
@@ -187,20 +187,22 @@ export const PlantDetailScreen: React.FC = () => {
     }
   };
 
-  const handleChangePhoto = () => {
-    launchImageLibrary({mediaType: 'photo', quality: 0.7}, async res => {
-      if (res.didCancel || !res.assets || !res.assets[0]?.uri) return;
-      const newPhotoUri = res.assets[0].uri;
-      if (!plant) return;
-      setSaving(true);
-      try {
-        const updated: Plant = {...plant, photoUri: newPhotoUri};
-        await updatePlant(updated);
-        setPlant(updated);
-      } finally {
-        setSaving(false);
-      }
+  const handleChangePhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
     });
+    if (result.canceled || !result.assets[0] || !plant) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated: Plant = {...plant, photoUri: result.assets[0].uri};
+      await updatePlant(updated);
+      setPlant(updated);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = () => {
