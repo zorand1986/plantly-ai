@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0] - 2026-04-10
+
+### Added
+- **Force update gate** — app checks minimum required version on launch; prompts users to update if their version is outdated, with a direct link to the store
+- **No internet detection** — shows a "No Internet Connection" screen on launch if the version check can't be reached, with a retry button
+
+---
+
 ## [1.3.0] - 2026-04-10
 
 ### Added

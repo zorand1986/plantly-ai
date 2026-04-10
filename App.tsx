@@ -19,6 +19,8 @@ import {
   requestBatteryOptimizationExemption,
   rescheduleAllNotifications,
 } from './src/utils/notifications';
+import {useForceUpdate} from './src/utils/forceUpdate';
+import {ForceUpdateGate} from './src/components/ForceUpdateGate';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -39,6 +41,7 @@ notifee.onBackgroundEvent(async ({type, detail}) => {
 function App(): React.JSX.Element {
   const navigationRef =
     useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const {status, retry} = useForceUpdate();
 
   useEffect(() => {
     // Request permissions and setup channel on mount
@@ -101,6 +104,13 @@ function App(): React.JSX.Element {
 
   return (
     <SafeAreaProvider>
+      {status.state === 'loading' && <ForceUpdateGate type="loading" />}
+      {status.state === 'no_internet' && (
+        <ForceUpdateGate type="no_internet" onRetry={retry} />
+      )}
+      {status.state === 'update_required' && (
+        <ForceUpdateGate type="update_required" config={status.config} />
+      )}
       <NavigationContainer ref={navigationRef}>
         <StatusBar barStyle="dark-content" backgroundColor="#f1f8e9" />
         <Stack.Navigator
