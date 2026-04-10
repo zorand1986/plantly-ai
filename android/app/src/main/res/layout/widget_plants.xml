@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="8dp">
+
+    <!-- Header: tap opens the app -->
+    <TextView
+        android:id="@+id/widget_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="💧 Water Today"
+        android:textColor="#1b5e20"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:paddingStart="4dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="6dp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#c8e6c9"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Plant list -->
+    <ListView
+        android:id="@+id/widget_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="0dp" />
+
+    <!-- Shown when no plants are due today -->
+    <TextView
+        android:id="@+id/widget_empty_text"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="All plants are happy 🌿"
+        android:textColor="#4caf50"
+        android:textSize="13sp" />
+
+</LinearLayout>
