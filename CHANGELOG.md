@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0] - 2026-04-10
+
+### Added
+- **Auto backup** — optionally backs up data once per day on first app open; keeps last 7 backups, configurable via Settings > Backup
+- **Backup section** — renamed from "Data Migration"; export now uses the native share sheet instead of writing directly to Downloads (works on all Android versions without permissions)
+
+---
+
 ## [1.4.0] - 2026-04-10
 
 ### Added

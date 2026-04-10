@@ -21,6 +21,7 @@ import {
 } from './src/utils/notifications';
 import {useForceUpdate} from './src/utils/forceUpdate';
 import {ForceUpdateGate} from './src/components/ForceUpdateGate';
+import {runAutoBackupIfNeeded} from './src/utils/autoBackup';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -56,6 +57,9 @@ function App(): React.JSX.Element {
 
     // Recover any notifications that may have been lost (e.g. app update, clock change)
     rescheduleAllNotifications();
+
+    // Auto-backup once per day if enabled
+    runAutoBackupIfNeeded();
 
     // Handle notification press while app is in foreground
     const unsubscribe = notifee.onForegroundEvent(({type, detail}) => {

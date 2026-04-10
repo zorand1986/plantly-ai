@@ -9,8 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {writeFile, DownloadDirectoryPath} from 'react-native-fs';
-import {NativeModules} from 'react-native';
+import {writeFile, CachesDirectoryPath} from 'react-native-fs';
+import {NativeModules, Platform, Share, Switch} from 'react-native';
+import {getLastAutoBackupDate} from '../utils/autoBackup';
 
 const {FilePicker} = NativeModules;
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -250,7 +251,9 @@ export const SettingsScreen: React.FC = () => {
     notificationHour: 9,
     notificationMinute: 0,
     dayOverrides: [null, null, null, null, null, null, null],
+    autoBackup: false,
   });
+  const [lastBackupDate, setLastBackupDate] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [devMode, setDevMode] = useState(false);
   const tapCount = useRef(0);
@@ -300,12 +303,18 @@ export const SettingsScreen: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const {json} = await exportAllData();
-      const path = `${DownloadDirectoryPath}/thryveo-backup.json`;
+      const {json, filename} = await exportAllData();
+      const path = `${CachesDirectoryPath}/${filename}`;
       await writeFile(path, json, 'utf8');
-      Alert.alert('Exported', 'Saved to Downloads/thryveo-backup.json');
-    } catch {
-      Alert.alert('Error', 'Could not export data.');
+      await Share.share(
+        Platform.OS === 'ios'
+          ? {url: `file://${path}`, title: filename}
+          : {message: json, title: filename},
+      );
+    } catch (e: any) {
+      if (e?.message !== 'User did not share') {
+        Alert.alert('Error', 'Could not export data.');
+      }
     }
   };
 
@@ -330,8 +339,15 @@ export const SettingsScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       getSettings().then(s => setSettings(s));
+      getLastAutoBackupDate().then(setLastBackupDate);
     }, []),
   );
+
+  const handleAutoBackupToggle = async (value: boolean) => {
+    const updated = {...settings, autoBackup: value};
+    setSettings(updated);
+    await saveSettings(updated);
+  };
 
   const handleSaveDefaultTime = async () => {
     await saveSettings(settings);
@@ -476,12 +492,27 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* ── Data migration ── */}
+        {/* ── Backup ── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Data Migration</Text>
+          <Text style={styles.cardTitle}>Backup</Text>
           <Text style={styles.cardSubtitle}>
-            Export your plants to move them to a new install.
+            Export or import your plants and settings.
           </Text>
+
+          <View style={styles.toggleRow}>
+            <View style={styles.testButtonTextWrap}>
+              <Text style={styles.testButtonTitle}>Auto Backup</Text>
+              <Text style={styles.testButtonSub}>
+                {lastBackupDate ? `Last backup: ${lastBackupDate}` : 'Backs up once a day on first open'}
+              </Text>
+            </View>
+            <Switch
+              value={settings.autoBackup}
+              onValueChange={handleAutoBackupToggle}
+              trackColor={{false: '#ccc', true: '#388e3c'}}
+              thumbColor="#fff"
+            />
+          </View>
 
           <TouchableOpacity
             style={styles.testButton}
@@ -490,7 +521,7 @@ export const SettingsScreen: React.FC = () => {
             <Text style={styles.testButtonEmoji}>📤</Text>
             <View style={styles.testButtonTextWrap}>
               <Text style={styles.testButtonTitle}>Export Data</Text>
-              <Text style={styles.testButtonSub}>Saves a .json file to Downloads</Text>
+              <Text style={styles.testButtonSub}>Share a .json backup</Text>
             </View>
           </TouchableOpacity>
 
@@ -649,6 +680,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 12,
     marginTop: 4,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f1f8e9',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
   },
   testButton: {
     flexDirection: 'row',
