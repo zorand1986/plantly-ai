@@ -34,7 +34,7 @@ export function useForceUpdate(): {status: Status; retry: () => void} {
     let cancelled = false;
     setStatus({state: 'loading'});
 
-    fetch(CONFIG_URL, {cache: 'no-store'})
+    fetch(`${CONFIG_URL}?_=${Date.now()}`, {cache: 'no-store'})
       .then(r => r.json())
       .then((config: ForceUpdateConfig) => {
         if (cancelled) {return;}
