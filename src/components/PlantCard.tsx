@@ -57,37 +57,30 @@ function diffCalendarDays(nextReminder: number): number {
 
 function formatDaysLeft(nextReminder: number): string {
   const diffDays = diffCalendarDays(nextReminder);
-
-  if (diffDays < 0) {
-    return 'Overdue!';
-  }
-  if (diffDays === 0) {
-    return 'Today';
-  }
-  if (diffDays === 1) {
-    return 'Tomorrow';
-  }
+  if (diffDays < 0) return 'Overdue';
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
   return `In ${diffDays} days`;
 }
 
-function getStatusColor(nextReminder: number): string {
+function getStatusColors(nextReminder: number): {bg: string; fg: string} {
   const diffDays = diffCalendarDays(nextReminder);
-  if (diffDays < 0) return '#e53935';
-  if (diffDays === 0) return '#fb8c00';
-  if (diffDays <= 2) return '#fdd835';
-  return '#43a047';
+  if (diffDays < 0) return {bg: '#FEF2F2', fg: '#DC2626'};
+  if (diffDays === 0) return {bg: '#FFF7ED', fg: '#D97706'};
+  if (diffDays <= 2) return {bg: '#FEFCE8', fg: '#CA8A04'};
+  return {bg: '#F0FDF4', fg: '#2B5F2B'};
 }
 
 export const PlantCard: React.FC<Props> = ({plant, onPress}) => {
   const daysLabel = formatDaysLeft(plant.nextReminder);
-  const statusColor = getStatusColor(plant.nextReminder);
+  const {bg: statusBg, fg: statusFg} = getStatusColors(plant.nextReminder);
   const lastWateredLabel = formatLastWatered(plant.lastWatered);
 
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={() => onPress(plant)}
-      activeOpacity={0.8}>
+      activeOpacity={0.7}>
       {plant.photoUri ? (
         <Image source={{uri: plant.photoUri}} style={styles.image} />
       ) : (
@@ -95,8 +88,8 @@ export const PlantCard: React.FC<Props> = ({plant, onPress}) => {
           <Text style={styles.placeholderEmoji}>🌱</Text>
         </View>
       )}
-      <View style={[styles.badge, {backgroundColor: statusColor}]}>
-        <Text style={styles.badgeText}>{daysLabel}</Text>
+      <View style={[styles.badge, {backgroundColor: statusBg}]}>
+        <Text style={[styles.badgeText, {color: statusFg}]}>{daysLabel}</Text>
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
@@ -105,7 +98,7 @@ export const PlantCard: React.FC<Props> = ({plant, onPress}) => {
         <Text style={styles.interval}>
           Every {plant.intervalDays} day{plant.intervalDays !== 1 ? 's' : ''}
         </Text>
-        <Text style={styles.lastWatered}>Last watered: {lastWateredLabel}</Text>
+        <Text style={styles.lastWatered}>Watered: {lastWateredLabel}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -114,64 +107,62 @@ export const PlantCard: React.FC<Props> = ({plant, onPress}) => {
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    margin: 4,
-    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    margin: 5,
+    padding: 10,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   image: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 12,
+    borderRadius: 10,
     marginBottom: 8,
   },
   imagePlaceholder: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 12,
-    backgroundColor: '#e8f5e9',
+    borderRadius: 10,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   placeholderEmoji: {
-    fontSize: 40,
+    fontSize: 38,
   },
   badge: {
-    borderRadius: 12,
+    borderRadius: 20,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 8,
+    paddingVertical: 3,
+    marginBottom: 7,
     alignSelf: 'stretch',
     alignItems: 'center',
   },
   badgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   info: {
     alignSelf: 'stretch',
   },
   name: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1b5e20',
+    color: '#111111',
     marginBottom: 2,
+    letterSpacing: 0.1,
   },
   interval: {
-    fontSize: 12,
-    color: '#757575',
+    fontSize: 11,
+    color: '#888888',
   },
   lastWatered: {
-    fontSize: 11,
-    color: '#9e9e9e',
+    fontSize: 10,
+    color: '#AAAAAA',
     marginTop: 2,
   },
 });

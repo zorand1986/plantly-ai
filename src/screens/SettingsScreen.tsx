@@ -45,7 +45,6 @@ function formatTime(hour: number, minute: number): string {
   return `${h}:${pad(minute)} ${period}`;
 }
 
-// Simple drum-roll style number picker rendered as +/- buttons
 function NumberPicker({
   label,
   value,
@@ -85,26 +84,26 @@ const pickerStyles = StyleSheet.create({
   wrapper: {alignItems: 'center', flex: 1},
   label: {
     fontSize: 11,
-    color: '#888',
+    color: '#999999',
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 6,
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
   row: {flexDirection: 'row', alignItems: 'center', gap: 12},
   btn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnText: {fontSize: 22, color: '#1b5e20', fontWeight: '700', lineHeight: 26},
+  btnText: {fontSize: 22, color: '#111111', fontWeight: '500', lineHeight: 26},
   value: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1b5e20',
+    color: '#111111',
     minWidth: 44,
     textAlign: 'center',
   },
@@ -113,7 +112,6 @@ const pickerStyles = StyleSheet.create({
 // ── per-day schedule ─────────────────────────────────────────────────────────
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-// Display order: Mon first
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 function DayRow({
@@ -186,7 +184,7 @@ function DayRow({
 
 const dayRowStyles = StyleSheet.create({
   container: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   row: {
     flexDirection: 'row',
@@ -194,38 +192,38 @@ const dayRowStyles = StyleSheet.create({
     gap: 8,
   },
   dayName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1b5e20',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111111',
     width: 40,
   },
   defaultTime: {
     flex: 1,
     fontSize: 14,
-    color: '#999',
+    color: '#AAAAAA',
   },
   customTime: {
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: '#2e7d32',
+    color: '#2B5F2B',
   },
   toggle: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#F0F0F0',
   },
   toggleActive: {
-    backgroundColor: '#2e7d32',
+    backgroundColor: '#1A1A1A',
   },
   toggleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#2e7d32',
+    color: '#555555',
   },
   toggleTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
   pickerRow: {
     flexDirection: 'row',
@@ -237,8 +235,8 @@ const dayRowStyles = StyleSheet.create({
   },
   colon: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#1b5e20',
+    fontWeight: '300',
+    color: '#CCCCCC',
     marginBottom: 18,
   },
 });
@@ -304,15 +302,15 @@ export const SettingsScreen: React.FC = () => {
   const handleExport = async () => {
     try {
       const {json, filename} = await exportAllData();
-      const path = `${CachesDirectoryPath}/${filename}`;
-      await writeFile(path, json, 'utf8');
-      await Share.share(
-        Platform.OS === 'ios'
-          ? {url: `file://${path}`, title: filename}
-          : {message: json, title: filename},
-      );
+      if (Platform.OS === 'android') {
+        await FilePicker.saveJsonFile(json, filename);
+      } else {
+        const path = `${CachesDirectoryPath}/${filename}`;
+        await writeFile(path, json, 'utf8');
+        await Share.share({url: `file://${path}`, title: filename});
+      }
     } catch (e: any) {
-      if (e?.message !== 'User did not share') {
+      if (e?.code !== 'CANCELLED' && e?.message !== 'User did not share') {
         Alert.alert('Error', 'Could not export data.');
       }
     }
@@ -330,7 +328,6 @@ export const SettingsScreen: React.FC = () => {
     }
   };
 
-  // Test notification - scheduled at custom time
   const [testHour, setTestHour] = useState(new Date().getHours());
   const [testMinute, setTestMinute] = useState(
     Math.ceil((new Date().getMinutes() + 1) % 60),
@@ -352,11 +349,9 @@ export const SettingsScreen: React.FC = () => {
   const handleSaveDefaultTime = async () => {
     await saveSettings(settings);
 
-    // Reschedule all existing plant notifications to the new default time
     const plants = await getPlants();
     await Promise.all(
       plants.map(async plant => {
-        // Recompute fire time on the same reminder day with the new clock time
         const newNextReminder = applyNotificationTime(
           plant.nextReminder,
           settings.notificationHour,
@@ -393,7 +388,6 @@ export const SettingsScreen: React.FC = () => {
       const now = new Date();
       const target = new Date();
       target.setHours(testHour, testMinute, 0, 0);
-      // If the time is already past today, schedule it for tomorrow
       if (target.getTime() <= now.getTime()) {
         target.setDate(target.getDate() + 1);
       }
@@ -425,7 +419,7 @@ export const SettingsScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}>
         {/* ── Default notification time ── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Default Notification Time</Text>
+          <Text style={styles.cardTitle}>Notification Time</Text>
           <Text style={styles.cardSubtitle}>
             All plant reminders will fire at this time of day.
           </Text>
@@ -500,98 +494,98 @@ export const SettingsScreen: React.FC = () => {
           </Text>
 
           <View style={styles.toggleRow}>
-            <View style={styles.testButtonTextWrap}>
-              <Text style={styles.testButtonTitle}>Auto Backup</Text>
-              <Text style={styles.testButtonSub}>
+            <View style={styles.rowTextWrap}>
+              <Text style={styles.rowTitle}>Auto Backup</Text>
+              <Text style={styles.rowSub}>
                 {lastBackupDate ? `Last backup: ${lastBackupDate}` : 'Backs up once a day on first open'}
               </Text>
             </View>
             <Switch
               value={settings.autoBackup}
               onValueChange={handleAutoBackupToggle}
-              trackColor={{false: '#ccc', true: '#388e3c'}}
-              thumbColor="#fff"
+              trackColor={{false: '#E0E0E0', true: '#2B5F2B'}}
+              thumbColor="#FFFFFF"
             />
           </View>
 
           <TouchableOpacity
-            style={styles.testButton}
+            style={styles.rowButton}
             onPress={handleExport}
             activeOpacity={0.8}>
-            <Text style={styles.testButtonEmoji}>📤</Text>
-            <View style={styles.testButtonTextWrap}>
-              <Text style={styles.testButtonTitle}>Export Data</Text>
-              <Text style={styles.testButtonSub}>Share a .json backup</Text>
+            <Text style={styles.rowButtonEmoji}>📤</Text>
+            <View style={styles.rowTextWrap}>
+              <Text style={styles.rowTitle}>Export Data</Text>
+              <Text style={styles.rowSub}>Share a .json backup</Text>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.testButton}
+            style={styles.rowButton}
             onPress={handleImport}
             activeOpacity={0.8}>
-            <Text style={styles.testButtonEmoji}>📥</Text>
-            <View style={styles.testButtonTextWrap}>
-              <Text style={styles.testButtonTitle}>Import Data</Text>
-              <Text style={styles.testButtonSub}>Reads thryveo-backup.json from Downloads</Text>
+            <Text style={styles.rowButtonEmoji}>📥</Text>
+            <View style={styles.rowTextWrap}>
+              <Text style={styles.rowTitle}>Import Data</Text>
+              <Text style={styles.rowSub}>Reads thryveo-backup.json from Downloads</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         {/* ── Test notifications (dev mode only) ── */}
-        {devMode && <View style={styles.card}>
-          <Text style={styles.cardTitle}>Test Notifications</Text>
-          <Text style={styles.cardSubtitle}>
-            Verify that notifications work on your device.
-          </Text>
+        {devMode && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Test Notifications</Text>
+            <Text style={styles.cardSubtitle}>
+              Verify that notifications work on your device.
+            </Text>
 
-          {/* Instant */}
-          <TouchableOpacity
-            style={styles.testButton}
-            onPress={handleTestNow}
-            activeOpacity={0.8}>
-            <Text style={styles.testButtonEmoji}>⚡</Text>
-            <View style={styles.testButtonTextWrap}>
-              <Text style={styles.testButtonTitle}>Send Now</Text>
-              <Text style={styles.testButtonSub}>Fires immediately</Text>
+            <TouchableOpacity
+              style={styles.rowButton}
+              onPress={handleTestNow}
+              activeOpacity={0.8}>
+              <Text style={styles.rowButtonEmoji}>⚡</Text>
+              <View style={styles.rowTextWrap}>
+                <Text style={styles.rowTitle}>Send Now</Text>
+                <Text style={styles.rowSub}>Fires immediately</Text>
+              </View>
+            </TouchableOpacity>
+
+            <Text style={styles.sectionLabel}>Schedule at a specific time</Text>
+            <View style={styles.pickerRow}>
+              <NumberPicker
+                label="Hour"
+                value={testHour}
+                min={0}
+                max={23}
+                onChange={setTestHour}
+              />
+              <Text style={styles.colon}>:</Text>
+              <NumberPicker
+                label="Minute"
+                value={testMinute}
+                min={0}
+                max={59}
+                onChange={setTestMinute}
+              />
             </View>
-          </TouchableOpacity>
+            <Text style={styles.previewTime}>
+              {formatTime(testHour, testMinute)}
+            </Text>
 
-          {/* Scheduled */}
-          <Text style={styles.sectionLabel}>Schedule at a specific time</Text>
-          <View style={styles.pickerRow}>
-            <NumberPicker
-              label="Hour"
-              value={testHour}
-              min={0}
-              max={23}
-              onChange={setTestHour}
-            />
-            <Text style={styles.colon}>:</Text>
-            <NumberPicker
-              label="Minute"
-              value={testMinute}
-              min={0}
-              max={59}
-              onChange={setTestMinute}
-            />
+            <TouchableOpacity
+              style={styles.rowButton}
+              onPress={handleTestScheduled}
+              activeOpacity={0.8}>
+              <Text style={styles.rowButtonEmoji}>🕐</Text>
+              <View style={styles.rowTextWrap}>
+                <Text style={styles.rowTitle}>Schedule Test</Text>
+                <Text style={styles.rowSub}>
+                  Fires at {formatTime(testHour, testMinute)}
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.previewTime}>
-            {formatTime(testHour, testMinute)}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.testButton}
-            onPress={handleTestScheduled}
-            activeOpacity={0.8}>
-            <Text style={styles.testButtonEmoji}>🕐</Text>
-            <View style={styles.testButtonTextWrap}>
-              <Text style={styles.testButtonTitle}>Schedule Test</Text>
-              <Text style={styles.testButtonSub}>
-                Fires at {formatTime(testHour, testMinute)}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>}
+        )}
 
         <Text style={styles.versionText}>v{appVersion}</Text>
       </ScrollView>
@@ -602,40 +596,38 @@ export const SettingsScreen: React.FC = () => {
 const headerStyles = StyleSheet.create({
   title: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#1b5e20',
+    fontWeight: '600',
+    color: '#111111',
   },
 });
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f8e9',
+    backgroundColor: '#FFFFFF',
   },
   scroll: {
     padding: 16,
     paddingBottom: 40,
-    gap: 16,
+    gap: 12,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   cardTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1b5e20',
+    color: '#111111',
     marginBottom: 4,
+    letterSpacing: 0.1,
   },
   cardSubtitle: {
     fontSize: 13,
-    color: '#757575',
+    color: '#999999',
     marginBottom: 20,
     lineHeight: 18,
   },
@@ -648,36 +640,37 @@ const styles = StyleSheet.create({
   },
   colon: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#1b5e20',
+    fontWeight: '300',
+    color: '#CCCCCC',
     marginBottom: 18,
   },
   previewTime: {
     textAlign: 'center',
-    fontSize: 15,
-    color: '#555',
+    fontSize: 14,
+    color: '#888888',
     marginBottom: 16,
   },
   primaryButton: {
-    backgroundColor: '#2e7d32',
-    borderRadius: 14,
-    paddingVertical: 14,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
   primaryButtonSaved: {
-    backgroundColor: '#43a047',
+    backgroundColor: '#2B5F2B',
   },
   primaryButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#388e3c',
+    color: '#999999',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     marginBottom: 12,
     marginTop: 4,
   },
@@ -685,55 +678,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f1f8e9',
-    borderRadius: 14,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
     padding: 14,
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  testButton: {
+  rowButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f8e9',
-    borderRadius: 14,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
     padding: 14,
-    marginBottom: 16,
+    marginBottom: 10,
     gap: 12,
   },
-  testButtonEmoji: {
-    fontSize: 28,
+  rowButtonEmoji: {
+    fontSize: 24,
   },
-  testButtonTextWrap: {
+  rowTextWrap: {
     flex: 1,
   },
-  testButtonTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1b5e20',
+  rowTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111111',
   },
-  testButtonSub: {
+  rowSub: {
     fontSize: 12,
-    color: '#757575',
+    color: '#999999',
     marginTop: 2,
   },
   toast: {
     position: 'absolute',
     top: 16,
     alignSelf: 'center',
-    backgroundColor: '#1b5e20',
+    backgroundColor: '#1A1A1A',
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 10,
     zIndex: 100,
   },
   toastText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
   versionText: {
     textAlign: 'center',
     fontSize: 12,
-    color: '#aaa',
-    marginTop: 8,
+    color: '#CCCCCC',
+    marginTop: 4,
   },
 });

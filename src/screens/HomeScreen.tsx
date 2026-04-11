@@ -1,5 +1,5 @@
 import React, {useCallback, useState} from 'react';
-import {FlatList, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {FlatList, Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -10,70 +10,13 @@ import {syncWidget, processPendingWaterings} from '../utils/widgetSync';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
-const ICON_COLOR = '#2e7d32';
-const TOOTH_COUNT = 8;
-
-const SettingsIcon: React.FC = () => {
-  const size = 20;
-  const center = size / 2;
-  const ringOuter = 8;
-  const ringInner = 5;
-  const toothW = 3;
-  const toothH = 2.5;
-  const toothR = ringOuter + 0.5;
-
-  return (
-    <View style={{width: size, height: size}}>
-      {/* Outer ring */}
-      <View
-        style={{
-          position: 'absolute',
-          width: ringOuter * 2,
-          height: ringOuter * 2,
-          borderRadius: ringOuter,
-          borderWidth: 2,
-          borderColor: ICON_COLOR,
-          top: center - ringOuter,
-          left: center - ringOuter,
-        }}
-      />
-      {/* Inner circle (hole) */}
-      <View
-        style={{
-          position: 'absolute',
-          width: ringInner * 2,
-          height: ringInner * 2,
-          borderRadius: ringInner,
-          backgroundColor: '#f1f8e9',
-          top: center - ringInner,
-          left: center - ringInner,
-        }}
-      />
-      {/* Teeth */}
-      {Array.from({length: TOOTH_COUNT}).map((_, i) => {
-        const angle = (i * 360) / TOOTH_COUNT;
-        const rad = (angle * Math.PI) / 180;
-        const tx = center + toothR * Math.sin(rad) - toothW / 2;
-        const ty = center - toothR * Math.cos(rad) - toothH / 2;
-        return (
-          <View
-            key={String(i)}
-            style={{
-              position: 'absolute',
-              width: toothW,
-              height: toothH,
-              backgroundColor: ICON_COLOR,
-              borderRadius: 0.5,
-              left: tx,
-              top: ty,
-              transform: [{rotate: `${angle}deg`}],
-            }}
-          />
-        );
-      })}
-    </View>
-  );
-};
+const MenuIcon: React.FC = () => (
+  <View style={{width: 18, height: 13, justifyContent: 'space-between'}}>
+    <View style={{height: 1.5, backgroundColor: '#111111', borderRadius: 1}} />
+    <View style={{height: 1.5, backgroundColor: '#111111', borderRadius: 1, width: 12}} />
+    <View style={{height: 1.5, backgroundColor: '#111111', borderRadius: 1}} />
+  </View>
+);
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
@@ -81,14 +24,12 @@ export const HomeScreen: React.FC = () => {
 
   const loadPlants = useCallback(async () => {
     const data = await getPlants();
-    // Sort by soonest next reminder
     data.sort((a, b) => a.nextReminder - b.nextReminder);
     setPlants(data);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      // Apply any waterings done from the widget while app was closed, then sync
       processPendingWaterings()
         .then(loadPlants)
         .then(syncWidget)
@@ -103,13 +44,13 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Dashboard</Text>
+        <Text style={styles.title}>My Plants</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => navigation.navigate('Settings')}
-            activeOpacity={0.8}>
-            <SettingsIcon />
+            activeOpacity={0.7}>
+            <MenuIcon />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addButton}
@@ -145,10 +86,12 @@ export const HomeScreen: React.FC = () => {
   );
 };
 
+const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f8e9',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -156,12 +99,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#1b5e20',
+    color: '#111111',
+    fontFamily: SERIF,
+    letterSpacing: 0.3,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -172,29 +119,30 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#c8e6c9',
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   addButton: {
-    backgroundColor: '#388e3c',
+    backgroundColor: '#1A1A1A',
     borderRadius: 20,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 8,
   },
   addButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+    letterSpacing: 0.2,
   },
   list: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
     paddingBottom: 24,
   },
   row: {
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   emptyState: {
     flex: 1,
@@ -203,18 +151,18 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
   emptyEmoji: {
-    fontSize: 64,
+    fontSize: 60,
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#388e3c',
+    color: '#111111',
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: 15,
-    color: '#757575',
+    fontSize: 14,
+    color: '#999999',
     textAlign: 'center',
     paddingHorizontal: 40,
   },

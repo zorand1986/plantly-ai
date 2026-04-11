@@ -1,11 +1,10 @@
-import React, {useCallback, useEffect, useState, useRef} from 'react';
+import React, {useCallback, useState, useRef} from 'react';
 import {
   Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {
   useFocusEffect,
   useNavigation,
@@ -33,6 +33,8 @@ import {RootStackParamList} from '../../App';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'PlantDetail'>;
 type RoutePropType = RouteProp<RootStackParamList, 'PlantDetail'>;
+
+const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString(undefined, {
@@ -126,7 +128,6 @@ export const PlantDetailScreen: React.FC = () => {
     try {
       const now = Date.now();
       const newNextReminder = computeNextReminder(now, plant.intervalDays);
-      // Add current timestamp to watering history
       const wateringHistory = [...(plant.wateringHistory || []), now];
       const updated: Plant = {
         ...plant,
@@ -138,7 +139,7 @@ export const PlantDetailScreen: React.FC = () => {
       updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
-      showToast(`Great job! Next watering: ${formatDate(newNextReminder)}`);
+      showToast(`Next watering: ${formatDate(newNextReminder)}`);
     } finally {
       setSaving(false);
     }
@@ -324,7 +325,7 @@ export const PlantDetailScreen: React.FC = () => {
                 overdue ? styles.overdueCard : styles.upcomingCard,
               ]}>
               <Text style={styles.statusLabel}>Next watering</Text>
-              <Text style={styles.statusDate}>
+              <Text style={[styles.statusDate, overdue && styles.statusDateOverdue]}>
                 {formatDate(plant.nextReminder)}
               </Text>
               <Text style={styles.statusDays}>
@@ -416,23 +417,23 @@ export const PlantDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f8e9',
+    backgroundColor: '#FFFFFF',
   },
   toast: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
+    alignSelf: 'center',
     zIndex: 999,
-    backgroundColor: '#00e676',
-    paddingVertical: 14,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 24,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    paddingVertical: 10,
+    marginTop: 12,
   },
   toastText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
   centered: {
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#757575',
+    color: '#999999',
     fontSize: 16,
   },
   scroll: {
@@ -460,24 +461,25 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     paddingVertical: 10,
     alignItems: 'center',
   },
   heroOverlayText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '500',
   },
   heroPlaceholder: {
     width: '100%',
     height: 200,
-    backgroundColor: '#c8e6c9',
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   heroEmoji: {
-    fontSize: 80,
+    fontSize: 72,
+    marginBottom: 8,
   },
   body: {
     padding: 20,
@@ -485,8 +487,10 @@ const styles = StyleSheet.create({
   plantName: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1b5e20',
+    color: '#111111',
     marginBottom: 16,
+    fontFamily: SERIF,
+    letterSpacing: 0.3,
   },
   nameEditRow: {
     flexDirection: 'row',
@@ -496,112 +500,113 @@ const styles = StyleSheet.create({
   },
   nameInput: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1b5e20',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111111',
   },
   saveNameButton: {
-    backgroundColor: '#388e3c',
+    backgroundColor: '#1A1A1A',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   saveNameButtonText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontWeight: '600',
     fontSize: 14,
   },
   cancelNameButton: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#E0E0E0',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   cancelNameButtonText: {
-    color: '#888',
-    fontWeight: '600',
+    color: '#888888',
+    fontWeight: '500',
     fontSize: 14,
   },
   statusCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
   },
   upcomingCard: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#F8F8F8',
+    borderColor: '#E8E8E8',
   },
   overdueCard: {
-    backgroundColor: '#ffebee',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
   },
   statusLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#888',
+    color: '#999999',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     marginBottom: 4,
   },
   statusDate: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1b5e20',
+    color: '#111111',
+  },
+  statusDateOverdue: {
+    color: '#DC2626',
   },
   statusDays: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: 13,
+    color: '#666666',
     marginTop: 2,
   },
   wateredButton: {
-    backgroundColor: '#1b5e20',
-    borderRadius: 14,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
   },
   wateredButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#388e3c',
+    color: '#999999',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     marginBottom: 10,
   },
   postponeRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 24,
+    gap: 8,
+    marginBottom: 28,
   },
   postponeChip: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
     paddingVertical: 10,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.07,
-    shadowRadius: 3,
-    elevation: 2,
   },
   postponeChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#388e3c',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333333',
   },
   intervalRow: {
     flexDirection: 'row',
@@ -610,58 +615,57 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   intervalInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#212121',
+    color: '#111111',
     width: 72,
     textAlign: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
   },
   intervalUnit: {
-    fontSize: 16,
-    color: '#555',
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#666666',
+    fontWeight: '400',
   },
   saveIntervalButton: {
-    backgroundColor: '#388e3c',
+    backgroundColor: '#1A1A1A',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginLeft: 'auto',
   },
   saveIntervalButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 13,
   },
   metaText: {
-    fontSize: 13,
-    color: '#9e9e9e',
-    marginBottom: 32,
+    fontSize: 12,
+    color: '#AAAAAA',
+    marginBottom: 28,
     marginTop: 4,
   },
   historyItem: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: 13,
+    color: '#666666',
+    marginBottom: 5,
+    paddingVertical: 2,
   },
   deleteButton: {
-    borderWidth: 1.5,
-    borderColor: '#e53935',
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    marginTop: 20,
   },
   deleteButtonText: {
-    color: '#e53935',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#DC2626',
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

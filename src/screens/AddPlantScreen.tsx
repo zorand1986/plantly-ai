@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   PermissionsAndroid,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {addPlant, computeNextReminder, Plant} from '../utils/storage';
@@ -84,6 +84,7 @@ export const AddPlantScreen: React.FC = () => {
         intervalDays: days,
         lastWatered: now,
         nextReminder,
+        wateringHistory: [now],
       };
 
       const notificationId = await scheduleNotification(plant);
@@ -99,7 +100,7 @@ export const AddPlantScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
         style={{flex: 1}}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -108,7 +109,7 @@ export const AddPlantScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="e.g. Monstera"
-            placeholderTextColor="#aaa"
+            placeholderTextColor="#BBBBBB"
             value={name}
             onChangeText={setName}
             returnKeyType="done"
@@ -156,43 +157,37 @@ export const AddPlantScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f8e9',
+    backgroundColor: '#FFFFFF',
   },
   scroll: {
     padding: 20,
     paddingBottom: 40,
   },
   sectionLabel: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#388e3c',
-    marginTop: 20,
+    color: '#999999',
+    marginTop: 24,
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F8F8',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#212121',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    color: '#111111',
   },
   photoBox: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#F8F8F8',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   photo: {
     width: '100%',
@@ -205,11 +200,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   photoEmoji: {
-    fontSize: 36,
+    fontSize: 32,
     marginBottom: 8,
   },
   photoHint: {
-    color: '#9e9e9e',
+    color: '#AAAAAA',
     fontSize: 14,
   },
   intervalRow: {
@@ -222,23 +217,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   intervalUnit: {
-    fontSize: 16,
-    color: '#555',
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#666666',
   },
   saveButton: {
-    backgroundColor: '#388e3c',
-    borderRadius: 14,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 36,
   },
   saveButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   saveButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
