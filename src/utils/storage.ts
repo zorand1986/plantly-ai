@@ -18,12 +18,15 @@ export interface AppSettings {
    * null means use the default notificationHour/notificationMinute.
    */
   dayOverrides: (DayTimeOverride | null)[];
+  /** Automatically back up data once per day on first app open */
+  autoBackup: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   notificationHour: 9,
   notificationMinute: 0,
   dayOverrides: [null, null, null, null, null, null, null],
+  autoBackup: false,
 };
 
 export async function getSettings(): Promise<AppSettings> {
