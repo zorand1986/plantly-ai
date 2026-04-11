@@ -106,15 +106,22 @@ function App(): React.JSX.Element {
     };
   }, []);
 
+  if (status.state !== 'ok') {
+    return (
+      <SafeAreaProvider>
+        {status.state === 'loading' && <ForceUpdateGate type="loading" />}
+        {status.state === 'no_internet' && (
+          <ForceUpdateGate type="no_internet" onRetry={retry} />
+        )}
+        {status.state === 'update_required' && (
+          <ForceUpdateGate type="update_required" config={status.config} />
+        )}
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
-      {status.state === 'loading' && <ForceUpdateGate type="loading" />}
-      {status.state === 'no_internet' && (
-        <ForceUpdateGate type="no_internet" onRetry={retry} />
-      )}
-      {status.state === 'update_required' && (
-        <ForceUpdateGate type="update_required" config={status.config} />
-      )}
       <NavigationContainer ref={navigationRef}>
         <StatusBar barStyle="dark-content" backgroundColor="#f1f8e9" />
         <Stack.Navigator
