@@ -45,9 +45,11 @@ function formatDate(ts: number): string {
 }
 
 function daysLabel(nextReminder: number): string {
-  const diffDays = Math.ceil(
-    (nextReminder - Date.now()) / (1000 * 60 * 60 * 24),
-  );
+  const now = new Date();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const reminderDay = new Date(nextReminder);
+  const reminderMidnight = new Date(reminderDay.getFullYear(), reminderDay.getMonth(), reminderDay.getDate()).getTime();
+  const diffDays = Math.round((reminderMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
   if (diffDays < 0)
     return `${Math.abs(diffDays)} day${
       Math.abs(diffDays) !== 1 ? 's' : ''

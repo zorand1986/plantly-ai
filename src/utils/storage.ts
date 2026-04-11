@@ -79,6 +79,9 @@ export interface Plant {
   lastWatered: number; // timestamp ms
   nextReminder: number; // timestamp ms
   notificationId?: string;
+  /** The nextReminder timestamp for which we last fired a notification.
+   *  Used to prevent duplicate notifications for the same reminder period. */
+  notifiedForReminder?: number;
   wateringHistory: number[]; // array of timestamps when plant was watered
 }
 

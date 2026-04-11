@@ -158,14 +158,36 @@ export async function rescheduleAllNotifications(): Promise<void> {
   }
   _rescheduling = true;
   try {
-    const plants = await getPlants();
+    const [plants, settings] = await Promise.all([getPlants(), getSettings()]);
     await Promise.all(
       plants.map(async plant => {
         if (!plant.nextReminder) {
           return;
         }
+
+        // Compute the actual fire timestamp for this plant's reminder.
+        const dayOfWeek = new Date(plant.nextReminder).getDay();
+        const {hour, minute} = getTimeForDay(settings, dayOfWeek);
+        const fireAt = applyNotificationTime(plant.nextReminder, hour, minute);
+        const isOverdue = fireAt <= Date.now();
+
+        // If the reminder time has already passed and we already sent a
+        // notification for this exact reminder period, do not fire again.
+        // The next notification will only come after the user marks the plant
+        // as watered (which sets a new nextReminder).
+        if (isOverdue && plant.notifiedForReminder === plant.nextReminder) {
+          return;
+        }
+
         const id = await scheduleNotification(plant);
-        await updatePlant({...plant, notificationId: id});
+
+        // For overdue/immediate fires, record that we've notified for this
+        // reminder period so subsequent reschedule calls are no-ops.
+        await updatePlant({
+          ...plant,
+          notificationId: id,
+          ...(isOverdue ? {notifiedForReminder: plant.nextReminder} : {}),
+        });
       }),
     );
   } finally {
