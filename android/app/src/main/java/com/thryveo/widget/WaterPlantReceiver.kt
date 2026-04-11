@@ -1,5 +1,7 @@
 package com.thryveo.widget
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -12,12 +14,13 @@ import org.json.JSONObject
 class WaterPlantReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val plantId = intent.getStringExtra(WidgetConstants.EXTRA_PLANT_ID) ?: return
         val action = intent.getStringExtra(WidgetConstants.EXTRA_ACTION) ?: return
+        val plantId = intent.getStringExtra(WidgetConstants.EXTRA_PLANT_ID) ?: return
 
         when (action) {
             WidgetConstants.ACTION_WATER -> handleWater(context, plantId)
             WidgetConstants.ACTION_OPEN -> handleOpen(context, plantId)
+            WidgetConstants.ACTION_CLEANUP -> handleCleanup(context, plantId)
         }
     }
 
@@ -34,23 +37,62 @@ class WaterPlantReceiver : BroadcastReceiver() {
             }
         )
 
-        // Remove this plant from the widget list immediately
+        // Add to just_watered for visual feedback — plant stays in list for now
+        val jwJson = prefs.getString(WidgetConstants.KEY_JUST_WATERED, "[]") ?: "[]"
+        val jwArr = try { JSONArray(jwJson) } catch (_: Exception) { JSONArray() }
+        jwArr.put(plantId)
+
+        prefs.edit()
+            .putString(WidgetConstants.KEY_PENDING_WATERINGS, pendingArr.toString())
+            .putString(WidgetConstants.KEY_JUST_WATERED, jwArr.toString())
+            .apply()
+
+        // Schedule cleanup (remove plant from list) after 1.5 seconds
+        val cleanupIntent = Intent(context, WaterPlantReceiver::class.java).apply {
+            putExtra(WidgetConstants.EXTRA_ACTION, WidgetConstants.ACTION_CLEANUP)
+            putExtra(WidgetConstants.EXTRA_PLANT_ID, plantId)
+        }
+        val pi = PendingIntent.getBroadcast(
+            context,
+            plantId.hashCode(),
+            cleanupIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        am.set(AlarmManager.RTC, System.currentTimeMillis() + 1500L, pi)
+
+        // Refresh widget to show "watered" state immediately
+        val manager = AppWidgetManager.getInstance(context)
+        val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
+        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
+    }
+
+    private fun handleCleanup(context: Context, plantId: String) {
+        val prefs = context.getSharedPreferences(WidgetConstants.PREFS_NAME, Context.MODE_PRIVATE)
+
+        // Remove plant from the list
         val plantsJson = prefs.getString(WidgetConstants.KEY_PLANTS, "[]") ?: "[]"
         val plantsArr = try { JSONArray(plantsJson) } catch (_: Exception) { JSONArray() }
         val remaining = JSONArray()
         for (i in 0 until plantsArr.length()) {
             val obj = plantsArr.getJSONObject(i)
-            if (obj.getString("id") != plantId) {
-                remaining.put(obj)
-            }
+            if (obj.getString("id") != plantId) remaining.put(obj)
+        }
+
+        // Remove from just_watered
+        val jwJson = prefs.getString(WidgetConstants.KEY_JUST_WATERED, "[]") ?: "[]"
+        val jwArr = try { JSONArray(jwJson) } catch (_: Exception) { JSONArray() }
+        val newJw = JSONArray()
+        for (i in 0 until jwArr.length()) {
+            if (jwArr.getString(i) != plantId) newJw.put(jwArr.getString(i))
         }
 
         prefs.edit()
-            .putString(WidgetConstants.KEY_PENDING_WATERINGS, pendingArr.toString())
             .putString(WidgetConstants.KEY_PLANTS, remaining.toString())
+            .putString(WidgetConstants.KEY_JUST_WATERED, newJw.toString())
             .apply()
 
-        // Refresh widget list
+        // Final refresh — plant disappears from the list
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
         manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)

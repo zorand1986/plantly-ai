@@ -26,6 +26,17 @@ export async function syncWidget(): Promise<void> {
 }
 
 /**
+ * Tells the widget to show/hide the "force update required" blocked state.
+ * Pass true when an update is required, false to restore normal widget.
+ */
+export async function setWidgetForceUpdate(required: boolean): Promise<void> {
+  if (Platform.OS !== 'android' || !WidgetData) {
+    return;
+  }
+  await WidgetData.setForceUpdateRequired(required);
+}
+
+/**
  * Reads any waterings recorded by the widget while the app was closed,
  * applies them (updates storage + reschedules notifications), then re-syncs.
  */

@@ -1,5 +1,5 @@
 {
-  "min_required_version": "1.6.0",
+  "min_required_version": "1.0.0",
   "update_message": "A critical update is required. Please update the app to continue.",
   "store_url_ios": "https://www.google.com",
   "store_url_android": "https://www.google.com"

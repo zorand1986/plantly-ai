@@ -28,6 +28,26 @@ class PlantWidget : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int,
         ) {
+            val prefs = context.getSharedPreferences(WidgetConstants.PREFS_NAME, Context.MODE_PRIVATE)
+            val forceUpdateRequired = prefs.getBoolean(WidgetConstants.KEY_FORCE_UPDATE, false)
+
+            if (forceUpdateRequired) {
+                val views = RemoteViews(context.packageName, R.layout.widget_force_update)
+                // Tapping the blocked widget opens the app so the user sees the update prompt
+                val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val openAppPendingIntent = PendingIntent.getActivity(
+                    context,
+                    0,
+                    openAppIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                views.setOnClickPendingIntent(R.id.widget_force_update_root, openAppPendingIntent)
+                appWidgetManager.updateAppWidget(appWidgetId, views)
+                return
+            }
+
             val views = RemoteViews(context.packageName, R.layout.widget_plants)
 
             // Set up remote adapter for the scrollable list

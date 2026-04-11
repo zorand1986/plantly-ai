@@ -22,6 +22,7 @@ import {
 import {useForceUpdate} from './src/utils/forceUpdate';
 import {ForceUpdateGate} from './src/components/ForceUpdateGate';
 import {runAutoBackupIfNeeded} from './src/utils/autoBackup';
+import {setWidgetForceUpdate} from './src/utils/widgetSync';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -43,6 +44,12 @@ function App(): React.JSX.Element {
   const navigationRef =
     useRef<NavigationContainerRef<RootStackParamList>>(null);
   const {status, retry} = useForceUpdate();
+
+  useEffect(() => {
+    if (status.state === 'update_required') {
+      setWidgetForceUpdate(true);
+    }
+  }, [status.state]);
 
   useEffect(() => {
     // Request permissions and setup channel on mount
