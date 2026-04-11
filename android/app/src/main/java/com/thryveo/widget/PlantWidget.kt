@@ -50,6 +50,13 @@ class PlantWidget : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.widget_plants)
 
+            // Show "✓ Watered!" in the header briefly after a plant is watered
+            val justWatered = prefs.getBoolean(WidgetConstants.KEY_JUST_WATERED, false)
+            views.setTextViewText(
+                R.id.widget_header,
+                if (justWatered) "✓ Watered!" else "💧 Water Today",
+            )
+
             // Set up remote adapter for the scrollable list
             val serviceIntent = Intent(context, PlantWidgetService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)

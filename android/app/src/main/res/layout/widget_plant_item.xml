@@ -29,6 +29,7 @@
         android:text="💧"
         android:textSize="22sp"
         android:background="@android:color/transparent"
+        android:clickable="true"
         android:contentDescription="Mark as watered" />
 
 </LinearLayout>

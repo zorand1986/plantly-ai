@@ -28,6 +28,7 @@ class WidgetDataModule(reactContext: ReactApplicationContext) :
                 .edit()
                 .putString(WidgetConstants.KEY_PLANTS, plantsJson)
                 .putBoolean(WidgetConstants.KEY_FORCE_UPDATE, false)
+                .putBoolean(WidgetConstants.KEY_JUST_WATERED, false)
                 .apply()
 
             val manager = AppWidgetManager.getInstance(ctx)
