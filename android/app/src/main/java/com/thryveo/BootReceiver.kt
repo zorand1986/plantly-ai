@@ -14,8 +14,8 @@ class BootReceiver : BroadcastReceiver() {
         )
         if (intent.action in bootActions) {
             HeadlessJsTaskService.acquireWakeLockNow(context)
-            val serviceIntent = Intent(context, BootTaskService::class.java)
-            context.startService(serviceIntent)
+            context.startService(Intent(context, BootTaskService::class.java))
+            context.startService(Intent(context, BootWidgetSyncService::class.java))
         }
     }
 }

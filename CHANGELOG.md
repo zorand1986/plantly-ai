@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1] - 2026-04-11
+
+### Fixed
+- Widget now populates on device boot without requiring the app to be opened first — a new headless task syncs plant data to the widget's shared storage at startup
+
+---
+
 ## [1.5.0] - 2026-04-10
 
 ### Added

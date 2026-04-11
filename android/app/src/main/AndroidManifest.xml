@@ -63,6 +63,9 @@
       <service
         android:name=".BootTaskService"
         android:exported="false" />
+      <service
+        android:name=".BootWidgetSyncService"
+        android:exported="false" />
 
       <!-- Home-screen widget -->
       <receiver
