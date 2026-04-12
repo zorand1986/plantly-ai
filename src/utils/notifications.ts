@@ -59,6 +59,7 @@ export async function scheduleNotification(plant: Plant): Promise<string> {
       android: {
         channelId: CHANNEL_ID,
         importance: AndroidImportance.HIGH,
+        smallIcon: 'ic_notification',
         pressAction: {id: 'default'},
       },
       ios: {
@@ -90,6 +91,7 @@ export async function sendTestNotificationNow(): Promise<void> {
     android: {
       channelId: CHANNEL_ID,
       importance: AndroidImportance.HIGH,
+      smallIcon: 'ic_notification',
       pressAction: {id: 'default'},
     },
     ios: {
@@ -123,6 +125,7 @@ export async function sendTestNotificationAt(
       android: {
         channelId: CHANNEL_ID,
         importance: AndroidImportance.HIGH,
+        smallIcon: 'ic_notification',
         pressAction: {id: 'default'},
       },
       ios: {
