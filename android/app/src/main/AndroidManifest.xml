@@ -88,6 +88,10 @@
         android:name=".widget.WaterPlantReceiver"
         android:exported="false" />
 
+      <service
+        android:name=".widget.WidgetWaterService"
+        android:exported="false" />
+
       <!-- Periodic widget sync: fires at 00:00:01, 08:00:01, 16:00:01 local time -->
       <receiver
         android:name=".PeriodicWidgetSyncReceiver"

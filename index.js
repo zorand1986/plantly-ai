@@ -23,3 +23,15 @@ AppRegistry.registerHeadlessTask('SyncWidget', () => async () => {
   await processPendingWaterings();
   await syncWidget();
 });
+
+// Headless task: immediately cancel a plant's scheduled notification when
+// it is watered directly from the widget, before the alarm has a chance to fire.
+// Triggered by WaterPlantReceiver → WidgetWaterService on Android.
+AppRegistry.registerHeadlessTask('CancelWateringNotification', () => async ({notificationId}) => {
+  if (notificationId) {
+    const notifee = require('@notifee/react-native').default;
+    try {
+      await notifee.cancelNotification(notificationId);
+    } catch {}
+  }
+});

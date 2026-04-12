@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import com.facebook.react.HeadlessJsTaskService
 import com.thryveo.R
 import org.json.JSONArray
 import org.json.JSONObject
@@ -52,6 +53,18 @@ class WaterPlantReceiver : BroadcastReceiver() {
             .putBoolean(WidgetConstants.KEY_JUST_WATERED, true)
             .apply()
 
+        // Cancel the scheduled notification for this plant immediately so it doesn't
+        // fire even if the app isn't opened before the alarm time.
+        val notificationId = getNotificationIdForPlant(plantsArr, plantId)
+        if (notificationId.isNotEmpty()) {
+            HeadlessJsTaskService.acquireWakeLockNow(context)
+            context.startService(
+                Intent(context, WidgetWaterService::class.java).apply {
+                    putExtra(WidgetWaterService.EXTRA_NOTIFICATION_ID, notificationId)
+                }
+            )
+        }
+
         // Refresh the full widget so the header shows "✓ Watered!" and the list updates
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
@@ -71,6 +84,16 @@ class WaterPlantReceiver : BroadcastReceiver() {
         )
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.set(AlarmManager.RTC, System.currentTimeMillis() + 2500L, pi)
+    }
+
+    private fun getNotificationIdForPlant(plantsArr: JSONArray, plantId: String): String {
+        for (i in 0 until plantsArr.length()) {
+            val obj = plantsArr.optJSONObject(i) ?: continue
+            if (obj.optString("id") == plantId) {
+                return obj.optString("notificationId", "")
+            }
+        }
+        return ""
     }
 
     private fun handleCleanup(context: Context) {

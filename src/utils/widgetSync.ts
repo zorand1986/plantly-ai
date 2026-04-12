@@ -20,7 +20,7 @@ export async function syncWidget(): Promise<void> {
   const duePlants = plants
     .filter(p => p.nextReminder <= endOfToday.getTime())
     .sort((a, b) => a.nextReminder - b.nextReminder)
-    .map(p => ({id: p.id, name: p.name, nextReminder: p.nextReminder}));
+    .map(p => ({id: p.id, name: p.name, nextReminder: p.nextReminder, notificationId: p.notificationId ?? ''}));
 
   await WidgetData.syncWidget(JSON.stringify(duePlants));
 }

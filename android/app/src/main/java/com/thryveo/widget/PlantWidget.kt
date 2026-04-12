@@ -97,6 +97,7 @@ class PlantWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             views.setOnClickPendingIntent(R.id.widget_header, openAppPendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_empty_text, openAppPendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
