@@ -12,6 +12,7 @@ import {HomeScreen} from './src/screens/HomeScreen';
 import {AddPlantScreen} from './src/screens/AddPlantScreen';
 import {PlantDetailScreen} from './src/screens/PlantDetailScreen';
 import {SettingsScreen} from './src/screens/SettingsScreen';
+import {SupportScreen} from './src/screens/SupportScreen';
 import {
   requestPermissions,
   setupNotificationChannel,
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   AddPlant: undefined;
   PlantDetail: {plantId: string};
   Settings: undefined;
+  Support: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -158,6 +160,11 @@ function App(): React.JSX.Element {
             name="Settings"
             component={SettingsScreen}
             options={{title: 'Settings'}}
+          />
+          <Stack.Screen
+            name="Support"
+            component={SupportScreen}
+            options={{title: 'Support'}}
           />
         </Stack.Navigator>
       </NavigationContainer>

@@ -62,6 +62,12 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.settingsButton}
+            onPress={() => navigation.navigate('Support')}
+            activeOpacity={0.7}>
+            <Text style={styles.coffeeIcon}>☕</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.settingsButton}
             onPress={() => navigation.navigate('Settings')}
             activeOpacity={0.7}>
             <MenuIcon />
@@ -136,6 +142,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  coffeeIcon: {
+    fontSize: 18,
   },
   addButton: {
     backgroundColor: '#1A1A1A',
