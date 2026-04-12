@@ -132,14 +132,19 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <NavigationContainer ref={navigationRef}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f1f8e9" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <Stack.Navigator
           initialRouteName="Home"
           screenOptions={{
-            headerStyle: {backgroundColor: '#f1f8e9'},
-            headerTintColor: '#1b5e20',
-            headerTitleStyle: {fontWeight: '700'},
-            contentStyle: {backgroundColor: '#f1f8e9'},
+            headerStyle: {backgroundColor: '#FFFFFF'},
+            headerTintColor: '#111111',
+            headerTitleStyle: {
+              fontWeight: '700',
+              fontFamily: 'serif',
+              fontSize: 20,
+              color: '#111111',
+            },
+            contentStyle: {backgroundColor: '#FFFFFF'},
           }}>
           <Stack.Screen
             name="Home"

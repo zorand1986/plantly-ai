@@ -595,9 +595,10 @@ export const SettingsScreen: React.FC = () => {
 
 const headerStyles = StyleSheet.create({
   title: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#111111',
+    fontFamily: 'serif',
   },
 });
 
