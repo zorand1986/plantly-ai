@@ -1,29 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Notification small icon — white silhouette on transparent background.
-    Android ignores fill colours and uses only the alpha channel, so this
-    must be a single-colour (white) shape.  Resembles the Y-branch plant
-    from the app icon.
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
 
+    <!-- Stem -->
     <path
         android:fillColor="#FFFFFF"
+        android:pathData="M11,20 L11,23 L13,23 L13,20Z"/>
+
+    <!--
+        Monstera leaf: oval body pointed at top, with:
+          - top centre notch (the characteristic heart split)
+          - 3 lens-shaped cuts per side at y=8, y=12, y=16
+        evenOdd fill makes the sub-paths punch transparent holes in the leaf.
+    -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
         android:pathData="
-M12,22
-C11.5,22 10,21.5 10,20
-L10,15
-C7,14.5 3.5,13 3.5,10
-C3.5,6.5 6.5,3.5 9.5,5
-C10.5,5.5 11.2,7 12,9
-C12.8,7 13.5,5.5 14.5,5
-C17.5,3.5 20.5,6.5 20.5,10
-C20.5,13 17,14.5 14,15
-L14,20
-C14,21.5 12.5,22 12,22Z" />
+            M12,20 C7,20 3,16 3,11 C3,6 7,2 12,2 C17,2 21,6 21,11 C21,16 17,20 12,20Z
+            M12,2 C11,4.5 11,6 12,6.5 C13,6 13,4.5 12,2Z
+            M5,8  C6,6.5  10,6.5  10,8  C10,9.5  6,9.5  5,8Z
+            M19,8 C18,6.5 14,6.5 14,8 C14,9.5 18,9.5 19,8Z
+            M3,12  C5,10.5  10,10.5  10,12  C10,13.5  5,13.5  3,12Z
+            M21,12 C19,10.5 14,10.5 14,12 C14,13.5 19,13.5 21,12Z
+            M5,16  C6,14.5  10,14.5  10,16  C10,17.5  6,17.5  5,16Z
+            M19,16 C18,14.5 14,14.5 14,16 C14,17.5 18,17.5 19,16Z"/>
 
 </vector>
