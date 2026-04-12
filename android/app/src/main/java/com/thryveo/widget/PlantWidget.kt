@@ -9,8 +9,19 @@ import android.net.Uri
 import android.widget.RemoteViews
 import com.thryveo.MainActivity
 import com.thryveo.R
+import com.thryveo.WidgetSyncScheduler
 
 class PlantWidget : AppWidgetProvider() {
+
+    override fun onEnabled(context: Context) {
+        // First widget instance added — start periodic background syncs
+        WidgetSyncScheduler.schedule(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        // Last widget instance removed — stop periodic syncs
+        WidgetSyncScheduler.cancel(context)
+    }
 
     override fun onUpdate(
         context: Context,

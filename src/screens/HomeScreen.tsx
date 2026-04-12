@@ -1,5 +1,5 @@
-import React, {useCallback, useState} from 'react';
-import {FlatList, Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {AppState, AppStateStatus, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -28,14 +28,28 @@ export const HomeScreen: React.FC = () => {
     setPlants(data);
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      processPendingWaterings()
-        .then(loadPlants)
-        .then(syncWidget)
-        .catch(() => {});
-    }, [loadPlants]),
-  );
+  const syncAndLoad = useCallback(() => {
+    processPendingWaterings()
+      .then(loadPlants)
+      .then(syncWidget)
+      .catch(() => {});
+  }, [loadPlants]);
+
+  // Re-sync when navigating back to this screen (e.g. from PlantDetail)
+  useFocusEffect(syncAndLoad);
+
+  // Re-sync when the app comes back to the foreground (useFocusEffect alone
+  // doesn't fire in that case if HomeScreen is already the top screen)
+  const appState = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (appState.current !== 'active' && next === 'active') {
+        syncAndLoad();
+      }
+      appState.current = next;
+    });
+    return () => sub.remove();
+  }, [syncAndLoad]);
 
   const handleCardPress = (plant: Plant) => {
     navigation.navigate('PlantDetail', {plantId: plant.id});

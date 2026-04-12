@@ -16,6 +16,8 @@ class BootReceiver : BroadcastReceiver() {
             HeadlessJsTaskService.acquireWakeLockNow(context)
             context.startService(Intent(context, BootTaskService::class.java))
             context.startService(Intent(context, BootWidgetSyncService::class.java))
+            // Re-arm the periodic widget sync alarm (cleared on power-off)
+            WidgetSyncScheduler.schedule(context)
         }
     }
 }
