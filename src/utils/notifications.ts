@@ -179,34 +179,31 @@ export function onNotificationPress(
  * reach this function at the same time.
  */
 export async function rescheduleAllNotifications(): Promise<void> {
-  const [plants, settings] = await Promise.all([getPlants(), getSettings()]);
+  const plants = await getPlants();
   for (const plant of plants) {
     if (!plant.nextReminder) {
       continue;
     }
 
-    // Compute the actual fire timestamp for this plant's reminder.
-    const dayOfWeek = new Date(plant.nextReminder).getDay();
-    const {hour, minute} = getTimeForDay(settings, dayOfWeek);
-    const fireAt = applyNotificationTime(plant.nextReminder, hour, minute);
-    const isOverdue = fireAt <= Date.now();
-
-    // If the reminder time has already passed and we already sent a
-    // notification for this exact reminder period, do not fire again.
-    // The next notification will only come after the user marks the plant
-    // as watered (which sets a new nextReminder).
-    if (isOverdue && plant.notifiedForReminder === plant.nextReminder) {
+    // If we've already scheduled (or fired) a notification for this exact
+    // reminder period, skip — regardless of whether it's overdue or future.
+    // This is the primary guard against duplicates: once a notification is
+    // scheduled, notifiedForReminder is set and this blocks every subsequent
+    // call until the user waters (which changes nextReminder).
+    if (plant.notifiedForReminder === plant.nextReminder) {
       continue;
     }
 
     const id = await scheduleNotification(plant);
 
-    // For overdue/immediate fires, record that we've notified for this
-    // reminder period so subsequent reschedule calls are no-ops.
+    // Always record that we've covered this reminder period, not just when
+    // overdue. This ensures that after the notification fires at its scheduled
+    // time and the plant becomes overdue, subsequent reschedule calls see
+    // notifiedForReminder === nextReminder and skip instead of firing again.
     await updatePlant({
       ...plant,
       notificationId: id,
-      ...(isOverdue ? {notifiedForReminder: plant.nextReminder} : {}),
+      notifiedForReminder: plant.nextReminder,
     });
   }
 }
