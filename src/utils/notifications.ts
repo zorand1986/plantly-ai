@@ -26,15 +26,7 @@ export async function requestPermissions(): Promise<void> {
 export async function scheduleNotification(plant: Plant): Promise<string> {
   await setupNotificationChannel();
 
-  // Cancel existing if any
-  if (plant.notificationId) {
-    try {
-      await notifee.cancelNotification(plant.notificationId);
-    } catch {}
-  }
-
-  // Apply the configured notification time to the reminder date,
-  // honouring any per-day-of-week override.
+  // Compute fire time first so we can use it for the idempotency check.
   const settings = await getSettings();
   const dayOfWeek = new Date(plant.nextReminder).getDay();
   const {hour, minute} = getTimeForDay(settings, dayOfWeek);
@@ -42,6 +34,36 @@ export async function scheduleNotification(plant: Plant): Promise<string> {
 
   // If the computed time is already in the past, fire 10 seconds from now
   const safeFireAt = fireAt > Date.now() ? fireAt : Date.now() + 10_000;
+
+  // Use notifee's own trigger list as the source of truth — it is shared
+  // across all JS contexts (main app and headless tasks), unlike in-memory flags.
+  const allTriggers = await notifee.getTriggerNotifications();
+  const forThisPlant = allTriggers.filter(
+    n => n.notification.data?.plantId === plant.id,
+  );
+
+  // Already scheduled at the exact right time → return as-is (idempotent).
+  // Two concurrent callers will both find the same entry once the first one
+  // has created it, preventing duplicate creation.
+  const match = forThisPlant.find(
+    n => (n.trigger as TimestampTrigger).timestamp === safeFireAt,
+  );
+  if (match?.notification?.id) {
+    return match.notification.id;
+  }
+
+  // Cancel ALL existing triggers for this plant (clears orphans from old bugs
+  // where concurrent calls left stale notifications behind).
+  for (const n of forThisPlant) {
+    if (n.notification.id) {
+      try { await notifee.cancelNotification(n.notification.id); } catch {}
+    }
+  }
+  // Belt-and-suspenders: also cancel by the stored ID in case it isn't in the
+  // trigger list yet (e.g. created milliseconds ago by a concurrent caller).
+  if (plant.notificationId) {
+    try { await notifee.cancelNotification(plant.notificationId); } catch {}
+  }
 
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
@@ -51,7 +73,7 @@ export async function scheduleNotification(plant: Plant): Promise<string> {
     },
   };
 
-  const id = await notifee.createTriggerNotification(
+  return notifee.createTriggerNotification(
     {
       title: 'Time to water!',
       body: `Your plant "${plant.name}" needs watering today.`,
@@ -68,8 +90,6 @@ export async function scheduleNotification(plant: Plant): Promise<string> {
     },
     trigger,
   );
-
-  return id;
 }
 
 export async function cancelNotification(
@@ -151,50 +171,43 @@ export function onNotificationPress(
 /**
  * Reschedule notifications for all plants. Called after device reboot (via
  * the headless task) and on app startup to recover from missed reschedulings.
- * A guard prevents concurrent calls from creating duplicate notifications.
+ *
+ * Plants are processed sequentially (not in parallel) so that concurrent calls
+ * from different JS contexts (main app vs headless task) cannot race on the
+ * same plant and create orphaned duplicate notifications. The idempotency
+ * check inside scheduleNotification() handles the case where two contexts
+ * reach this function at the same time.
  */
-let _rescheduling = false;
-
 export async function rescheduleAllNotifications(): Promise<void> {
-  if (_rescheduling) {
-    return;
-  }
-  _rescheduling = true;
-  try {
-    const [plants, settings] = await Promise.all([getPlants(), getSettings()]);
-    await Promise.all(
-      plants.map(async plant => {
-        if (!plant.nextReminder) {
-          return;
-        }
+  const [plants, settings] = await Promise.all([getPlants(), getSettings()]);
+  for (const plant of plants) {
+    if (!plant.nextReminder) {
+      continue;
+    }
 
-        // Compute the actual fire timestamp for this plant's reminder.
-        const dayOfWeek = new Date(plant.nextReminder).getDay();
-        const {hour, minute} = getTimeForDay(settings, dayOfWeek);
-        const fireAt = applyNotificationTime(plant.nextReminder, hour, minute);
-        const isOverdue = fireAt <= Date.now();
+    // Compute the actual fire timestamp for this plant's reminder.
+    const dayOfWeek = new Date(plant.nextReminder).getDay();
+    const {hour, minute} = getTimeForDay(settings, dayOfWeek);
+    const fireAt = applyNotificationTime(plant.nextReminder, hour, minute);
+    const isOverdue = fireAt <= Date.now();
 
-        // If the reminder time has already passed and we already sent a
-        // notification for this exact reminder period, do not fire again.
-        // The next notification will only come after the user marks the plant
-        // as watered (which sets a new nextReminder).
-        if (isOverdue && plant.notifiedForReminder === plant.nextReminder) {
-          return;
-        }
+    // If the reminder time has already passed and we already sent a
+    // notification for this exact reminder period, do not fire again.
+    // The next notification will only come after the user marks the plant
+    // as watered (which sets a new nextReminder).
+    if (isOverdue && plant.notifiedForReminder === plant.nextReminder) {
+      continue;
+    }
 
-        const id = await scheduleNotification(plant);
+    const id = await scheduleNotification(plant);
 
-        // For overdue/immediate fires, record that we've notified for this
-        // reminder period so subsequent reschedule calls are no-ops.
-        await updatePlant({
-          ...plant,
-          notificationId: id,
-          ...(isOverdue ? {notifiedForReminder: plant.nextReminder} : {}),
-        });
-      }),
-    );
-  } finally {
-    _rescheduling = false;
+    // For overdue/immediate fires, record that we've notified for this
+    // reminder period so subsequent reschedule calls are no-ops.
+    await updatePlant({
+      ...plant,
+      notificationId: id,
+      ...(isOverdue ? {notifiedForReminder: plant.nextReminder} : {}),
+    });
   }
 }
 
