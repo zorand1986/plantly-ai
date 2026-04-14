@@ -66,9 +66,11 @@ export async function processPendingWaterings(): Promise<void> {
       nextReminder: newNextReminder,
       wateringHistory,
     };
-    const notifId = await scheduleNotification(updated);
-    updated.notificationId = notifId;
     await updatePlant(updated);
+    try {
+      const notifId = await scheduleNotification(updated);
+      await updatePlant({...updated, notificationId: notifId});
+    } catch {}
   }
 
   // Re-sync widget with fresh data after applying pending waterings

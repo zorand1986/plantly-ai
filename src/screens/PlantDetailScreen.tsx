@@ -114,11 +114,15 @@ export const PlantDetailScreen: React.FC = () => {
       const newNextReminder =
         plant.nextReminder + extraDays * 24 * 60 * 60 * 1000;
       const updated: Plant = {...plant, nextReminder: newNextReminder};
-      const notifId = await scheduleNotification(updated);
-      updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
       showToast(`Reminder moved to ${formatDate(newNextReminder)}.`);
+      try {
+        const notifId = await scheduleNotification(updated);
+        const withNotif = {...updated, notificationId: notifId};
+        await updatePlant(withNotif);
+        setPlant(withNotif);
+      } catch {}
     } finally {
       setSaving(false);
     }
@@ -137,11 +141,15 @@ export const PlantDetailScreen: React.FC = () => {
         nextReminder: newNextReminder,
         wateringHistory,
       };
-      const notifId = await scheduleNotification(updated);
-      updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
       showToast(`Next watering: ${formatDate(newNextReminder)}`);
+      try {
+        const notifId = await scheduleNotification(updated);
+        const withNotif = {...updated, notificationId: notifId};
+        await updatePlant(withNotif);
+        setPlant(withNotif);
+      } catch {}
     } finally {
       setSaving(false);
     }
@@ -162,11 +170,15 @@ export const PlantDetailScreen: React.FC = () => {
         intervalDays: days,
         nextReminder: newNextReminder,
       };
-      const notifId = await scheduleNotification(updated);
-      updated.notificationId = notifId;
       await updatePlant(updated);
       setPlant(updated);
       showToast('Watering interval updated.');
+      try {
+        const notifId = await scheduleNotification(updated);
+        const withNotif = {...updated, notificationId: notifId};
+        await updatePlant(withNotif);
+        setPlant(withNotif);
+      } catch {}
     } finally {
       setSaving(false);
     }
@@ -230,7 +242,7 @@ export const PlantDetailScreen: React.FC = () => {
 
   if (!plant) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.centered}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -241,7 +253,7 @@ export const PlantDetailScreen: React.FC = () => {
   const overdue = plant.nextReminder < Date.now();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {toastVisible && (
         <Animated.View
           style={[styles.toast, {transform: [{translateY: toastAnim}]}]}>

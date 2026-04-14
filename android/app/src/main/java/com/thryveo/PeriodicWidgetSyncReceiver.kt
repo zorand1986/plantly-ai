@@ -11,9 +11,11 @@ import com.facebook.react.HeadlessJsTaskService
  */
 class PeriodicWidgetSyncReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        HeadlessJsTaskService.acquireWakeLockNow(context)
-        context.startService(Intent(context, BootWidgetSyncService::class.java))
-        // Re-schedule so the next aligned slot is queued
+        // Re-schedule first so the chain is never broken, even if the service start fails
         WidgetSyncScheduler.schedule(context)
+        try {
+            HeadlessJsTaskService.acquireWakeLockNow(context)
+            context.startService(Intent(context, BootWidgetSyncService::class.java))
+        } catch (_: Exception) {}
     }
 }

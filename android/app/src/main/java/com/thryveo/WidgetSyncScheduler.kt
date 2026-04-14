@@ -16,12 +16,14 @@ object WidgetSyncScheduler {
 
     /** Schedule the next aligned sync slot (called on boot and when the widget is added). */
     fun schedule(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            nextAlignedTrigger(),
-            buildPendingIntent(context),
-        )
+        try {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextAlignedTrigger(),
+                buildPendingIntent(context),
+            )
+        } catch (_: Exception) {}
     }
 
     /** Cancel all pending syncs (called when the last widget instance is removed). */

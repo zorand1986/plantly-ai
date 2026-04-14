@@ -57,12 +57,14 @@ class WaterPlantReceiver : BroadcastReceiver() {
         // fire even if the app isn't opened before the alarm time.
         val notificationId = getNotificationIdForPlant(plantsArr, plantId)
         if (notificationId.isNotEmpty()) {
-            HeadlessJsTaskService.acquireWakeLockNow(context)
-            context.startService(
-                Intent(context, WidgetWaterService::class.java).apply {
-                    putExtra(WidgetWaterService.EXTRA_NOTIFICATION_ID, notificationId)
-                }
-            )
+            try {
+                HeadlessJsTaskService.acquireWakeLockNow(context)
+                context.startService(
+                    Intent(context, WidgetWaterService::class.java).apply {
+                        putExtra(WidgetWaterService.EXTRA_NOTIFICATION_ID, notificationId)
+                    }
+                )
+            } catch (_: Exception) { /* non-critical — plant data is already recorded */ }
         }
 
         // Refresh the full widget so the header shows "✓ Watered!" and the list updates
