@@ -61,9 +61,6 @@
         </intent-filter>
       </receiver>
       <service
-        android:name=".BootTaskService"
-        android:exported="false" />
-      <service
         android:name=".BootWidgetSyncService"
         android:exported="false" />
 

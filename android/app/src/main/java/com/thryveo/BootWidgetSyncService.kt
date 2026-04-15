@@ -10,7 +10,7 @@ class BootWidgetSyncService : HeadlessJsTaskService() {
         return HeadlessJsTaskConfig(
             "SyncWidget",
             Arguments.createMap(),
-            10_000,   // 10 second timeout
+            30_000,   // 30 second timeout — task now also reschedules notifications
             true,     // allowed in foreground
         )
     }

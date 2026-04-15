@@ -7,6 +7,7 @@ import {Plant, getPlants} from '../utils/storage';
 import {PlantCard} from '../components/PlantCard';
 import {RootStackParamList} from '../../App';
 import {syncWidget, processPendingWaterings} from '../utils/widgetSync';
+import {rescheduleAllNotifications} from '../utils/notifications';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -29,7 +30,12 @@ export const HomeScreen: React.FC = () => {
   }, []);
 
   const syncAndLoad = useCallback(() => {
+    // Serial chain: widget waterings first (so reschedule sees fresh
+    // nextReminder values), then reschedule sweeps any plants whose flag is
+    // out of sync, then refresh the UI and widget. Running these in parallel
+    // caused duplicate notifications.
     processPendingWaterings()
+      .then(rescheduleAllNotifications)
       .then(loadPlants)
       .then(syncWidget)
       .catch(() => {});

@@ -26,44 +26,57 @@ export async function requestPermissions(): Promise<void> {
 export async function scheduleNotification(plant: Plant): Promise<string> {
   await setupNotificationChannel();
 
-  // Compute fire time first so we can use it for the idempotency check.
-  const settings = await getSettings();
-  const dayOfWeek = new Date(plant.nextReminder).getDay();
-  const {hour, minute} = getTimeForDay(settings, dayOfWeek);
-  const fireAt = applyNotificationTime(plant.nextReminder, hour, minute);
-
-  // If the computed time is already in the past, fire 10 seconds from now
-  const safeFireAt = fireAt > Date.now() ? fireAt : Date.now() + 10_000;
-
-  // Use notifee's own trigger list as the source of truth — it is shared
-  // across all JS contexts (main app and headless tasks), unlike in-memory flags.
+  // Always inspect notifee's native trigger list. It's the only authoritative
+  // source of what's actually scheduled, and it persists across app upgrades,
+  // so it's where orphan/duplicate triggers from older buggy versions live.
   const allTriggers = await notifee.getTriggerNotifications();
   const forThisPlant = allTriggers.filter(
     n => n.notification.data?.plantId === plant.id,
   );
 
-  // Already scheduled at the exact right time → return as-is (idempotent).
-  // Two concurrent callers will both find the same entry once the first one
-  // has created it, preventing duplicate creation.
-  const match = forThisPlant.find(
-    n => (n.trigger as TimestampTrigger).timestamp === safeFireAt,
-  );
-  if (match?.notification?.id) {
-    return match.notification.id;
+  const cancelAllForPlant = async () => {
+    for (const n of forThisPlant) {
+      if (n.notification.id) {
+        try { await notifee.cancelNotification(n.notification.id); } catch {}
+      }
+    }
+  };
+
+  if (!plant.nextReminder) {
+    await cancelAllForPlant();
+    return plant.notificationId ?? '';
   }
 
-  // Cancel ALL existing triggers for this plant (clears orphans from old bugs
-  // where concurrent calls left stale notifications behind).
-  for (const n of forThisPlant) {
-    if (n.notification.id) {
-      try { await notifee.cancelNotification(n.notification.id); } catch {}
+  // Primary guard: already scheduled (or already fired) for this exact
+  // reminder period. Keep one trigger if it exists, cancel every other —
+  // this is what heals legacy duplicates on every call.
+  if (
+    plant.notifiedForReminder === plant.nextReminder &&
+    plant.notificationId
+  ) {
+    for (const n of forThisPlant) {
+      if (n.notification.id && n.notification.id !== plant.notificationId) {
+        try { await notifee.cancelNotification(n.notification.id); } catch {}
+      }
     }
+    return plant.notificationId;
   }
-  // Belt-and-suspenders: also cancel by the stored ID in case it isn't in the
-  // trigger list yet (e.g. created milliseconds ago by a concurrent caller).
-  if (plant.notificationId) {
+
+  // Not yet notified for this nextReminder — wipe any pending triggers and
+  // the stored notificationId, then schedule exactly one fresh trigger.
+  await cancelAllForPlant();
+  if (
+    plant.notificationId &&
+    !forThisPlant.some(n => n.notification.id === plant.notificationId)
+  ) {
     try { await notifee.cancelNotification(plant.notificationId); } catch {}
   }
+
+  const settings = await getSettings();
+  const dayOfWeek = new Date(plant.nextReminder).getDay();
+  const {hour, minute} = getTimeForDay(settings, dayOfWeek);
+  const fireAt = applyNotificationTime(plant.nextReminder, hour, minute);
+  const safeFireAt = fireAt > Date.now() ? fireAt : Date.now() + 10_000;
 
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
@@ -181,29 +194,21 @@ export function onNotificationPress(
 export async function rescheduleAllNotifications(): Promise<void> {
   const plants = await getPlants();
   for (const plant of plants) {
-    if (!plant.nextReminder) {
-      continue;
-    }
+    if (!plant.nextReminder) continue;
 
-    // If we've already scheduled (or fired) a notification for this exact
-    // reminder period, skip — regardless of whether it's overdue or future.
-    // This is the primary guard against duplicates: once a notification is
-    // scheduled, notifiedForReminder is set and this blocks every subsequent
-    // call until the user waters (which changes nextReminder).
-    if (plant.notifiedForReminder === plant.nextReminder) {
-      continue;
-    }
-
+    // Always call scheduleNotification — it self-heals orphan triggers from
+    // prior buggy versions even when the storage invariant already holds.
+    const scheduledFor = plant.nextReminder;
     const id = await scheduleNotification(plant);
 
-    // Always record that we've covered this reminder period, not just when
-    // overdue. This ensures that after the notification fires at its scheduled
-    // time and the plant becomes overdue, subsequent reschedule calls see
-    // notifiedForReminder === nextReminder and skip instead of firing again.
+    // Re-read plant state before writing so we don't stomp on a concurrent
+    // update (e.g. processPendingWaterings writing a fresh nextReminder).
+    const fresh = (await getPlants()).find(p => p.id === plant.id);
+    if (!fresh || fresh.nextReminder !== scheduledFor) continue;
     await updatePlant({
-      ...plant,
+      ...fresh,
       notificationId: id,
-      notifiedForReminder: plant.nextReminder,
+      notifiedForReminder: scheduledFor,
     });
   }
 }

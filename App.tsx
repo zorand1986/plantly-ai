@@ -18,7 +18,6 @@ import {
   setupNotificationChannel,
   ensureExactAlarmPermission,
   requestBatteryOptimizationExemption,
-  rescheduleAllNotifications,
 } from './src/utils/notifications';
 import {useForceUpdate} from './src/utils/forceUpdate';
 import {ForceUpdateGate} from './src/components/ForceUpdateGate';
@@ -64,8 +63,8 @@ function App(): React.JSX.Element {
     // Android: request battery optimisation exemption so alarms survive Doze/OEM killers
     requestBatteryOptimizationExemption();
 
-    // Recover any notifications that may have been lost (e.g. app update, clock change)
-    rescheduleAllNotifications();
+    // rescheduleAllNotifications is invoked from HomeScreen's syncAndLoad
+    // (after processPendingWaterings) so the two cannot race on plant state.
 
     // Auto-backup once per day if enabled
     runAutoBackupIfNeeded();

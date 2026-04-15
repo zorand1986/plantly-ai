@@ -350,19 +350,26 @@ export const SettingsScreen: React.FC = () => {
     await saveSettings(settings);
 
     const plants = await getPlants();
-    await Promise.all(
-      plants.map(async plant => {
-        const newNextReminder = applyNotificationTime(
-          plant.nextReminder,
-          settings.notificationHour,
-          settings.notificationMinute,
-        );
-        const updated = {...plant, nextReminder: newNextReminder};
-        const notifId = await scheduleNotification(updated);
-        updated.notificationId = notifId;
-        await updatePlant(updated);
-      }),
-    );
+    // Sequential so concurrent updatePlant writes don't stomp on each other,
+    // and so scheduleNotification's trigger-list check can't race across plants.
+    for (const plant of plants) {
+      const newNextReminder = applyNotificationTime(
+        plant.nextReminder,
+        settings.notificationHour,
+        settings.notificationMinute,
+      );
+      const updated = {
+        ...plant,
+        nextReminder: newNextReminder,
+        notifiedForReminder: undefined,
+      };
+      const notifId = await scheduleNotification(updated);
+      await updatePlant({
+        ...updated,
+        notificationId: notifId,
+        notifiedForReminder: newNextReminder,
+      });
+    }
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

@@ -67,11 +67,16 @@ export async function processPendingWaterings(): Promise<void> {
       lastWatered: timestamp,
       nextReminder: newNextReminder,
       wateringHistory,
+      notifiedForReminder: undefined,
     };
     await updatePlant(updated);
     try {
       const notifId = await scheduleNotification(updated);
-      await updatePlant({...updated, notificationId: notifId});
+      await updatePlant({
+        ...updated,
+        notificationId: notifId,
+        notifiedForReminder: newNextReminder,
+      });
     } catch {}
   }
 

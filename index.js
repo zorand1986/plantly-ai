@@ -8,19 +8,18 @@ import {name as appName} from './app.json';
 
 AppRegistry.registerComponent(appName, () => App);
 
-// Headless task: reschedule all plant notifications after device reboot.
-// Triggered by BootReceiver → BootTaskService on Android.
-AppRegistry.registerHeadlessTask('RescheduleNotifications', () => async () => {
-  const {rescheduleAllNotifications} = require('./src/utils/notifications');
-  await rescheduleAllNotifications();
-});
-
-// Headless task: sync widget data after device reboot so the widget is
-// populated without the user having to open the app first.
-// Triggered by BootReceiver → BootWidgetSyncService on Android.
+// Headless task: process widget waterings, reschedule notifications, and
+// refresh the widget — in that order. Running these serially (rather than
+// as two parallel services) guarantees that reschedule never races with
+// processPendingWaterings on the same plant, which would otherwise create
+// duplicate notifee triggers.
+// Triggered by BootReceiver (on boot) and PeriodicWidgetSyncReceiver (every
+// 8h) via BootWidgetSyncService.
 AppRegistry.registerHeadlessTask('SyncWidget', () => async () => {
   const {processPendingWaterings, syncWidget} = require('./src/utils/widgetSync');
+  const {rescheduleAllNotifications} = require('./src/utils/notifications');
   await processPendingWaterings();
+  await rescheduleAllNotifications();
   await syncWidget();
 });
 

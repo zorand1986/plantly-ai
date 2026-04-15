@@ -113,13 +113,24 @@ export const PlantDetailScreen: React.FC = () => {
     try {
       const newNextReminder =
         plant.nextReminder + extraDays * 24 * 60 * 60 * 1000;
-      const updated: Plant = {...plant, nextReminder: newNextReminder};
+      // Clear notifiedForReminder since nextReminder is changing — this is
+      // what tells scheduleNotification / rescheduleAllNotifications that
+      // a fresh notification is needed for the new reminder period.
+      const updated: Plant = {
+        ...plant,
+        nextReminder: newNextReminder,
+        notifiedForReminder: undefined,
+      };
       await updatePlant(updated);
       setPlant(updated);
       showToast(`Reminder moved to ${formatDate(newNextReminder)}.`);
       try {
         const notifId = await scheduleNotification(updated);
-        const withNotif = {...updated, notificationId: notifId};
+        const withNotif: Plant = {
+          ...updated,
+          notificationId: notifId,
+          notifiedForReminder: newNextReminder,
+        };
         await updatePlant(withNotif);
         setPlant(withNotif);
       } catch {}
@@ -140,13 +151,18 @@ export const PlantDetailScreen: React.FC = () => {
         lastWatered: now,
         nextReminder: newNextReminder,
         wateringHistory,
+        notifiedForReminder: undefined,
       };
       await updatePlant(updated);
       setPlant(updated);
       showToast(`Next watering: ${formatDate(newNextReminder)}`);
       try {
         const notifId = await scheduleNotification(updated);
-        const withNotif = {...updated, notificationId: notifId};
+        const withNotif: Plant = {
+          ...updated,
+          notificationId: notifId,
+          notifiedForReminder: newNextReminder,
+        };
         await updatePlant(withNotif);
         setPlant(withNotif);
       } catch {}
@@ -169,13 +185,18 @@ export const PlantDetailScreen: React.FC = () => {
         ...plant,
         intervalDays: days,
         nextReminder: newNextReminder,
+        notifiedForReminder: undefined,
       };
       await updatePlant(updated);
       setPlant(updated);
       showToast('Watering interval updated.');
       try {
         const notifId = await scheduleNotification(updated);
-        const withNotif = {...updated, notificationId: notifId};
+        const withNotif: Plant = {
+          ...updated,
+          notificationId: notifId,
+          notifiedForReminder: newNextReminder,
+        };
         await updatePlant(withNotif);
         setPlant(withNotif);
       } catch {}

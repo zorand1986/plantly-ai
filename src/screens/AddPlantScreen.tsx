@@ -89,6 +89,7 @@ export const AddPlantScreen: React.FC = () => {
 
       const notificationId = await scheduleNotification(plant);
       plant.notificationId = notificationId;
+      plant.notifiedForReminder = plant.nextReminder;
 
       await addPlant(plant);
       navigation.goBack();
