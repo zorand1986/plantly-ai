@@ -5,8 +5,9 @@ import {scheduleNotification} from './notifications';
 const {WidgetData} = NativeModules;
 
 /**
- * Pushes today's due plants (nextReminder <= end of today, or overdue)
- * to the Android widget via the native WidgetData module.
+ * Pushes the full plant list to the Android widget via the native WidgetData
+ * module. The widget itself filters by "due today" at render time, so the list
+ * stays correct across the midnight rollover without needing JS to refire.
  * No-op on iOS or when the module isn't available.
  */
 export async function syncWidget(): Promise<void> {
@@ -14,15 +15,16 @@ export async function syncWidget(): Promise<void> {
     return;
   }
   const plants = await getPlants();
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
-
-  const duePlants = plants
-    .filter(p => p.nextReminder <= endOfToday.getTime())
+  const payload = plants
     .sort((a, b) => a.nextReminder - b.nextReminder)
-    .map(p => ({id: p.id, name: p.name, nextReminder: p.nextReminder, notificationId: p.notificationId ?? ''}));
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      nextReminder: p.nextReminder,
+      notificationId: p.notificationId ?? '',
+    }));
 
-  await WidgetData.syncWidget(JSON.stringify(duePlants));
+  await WidgetData.syncWidget(JSON.stringify(payload));
 }
 
 /**

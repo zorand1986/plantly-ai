@@ -5,9 +5,10 @@ import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.thryveo.R
+import java.util.Calendar
 import org.json.JSONArray
 
-data class WidgetPlant(val id: String, val name: String)
+data class WidgetPlant(val id: String, val name: String, val nextReminder: Long)
 
 class PlantWidgetFactory(
     private val context: Context,
@@ -59,14 +60,33 @@ class PlantWidgetFactory(
     private fun loadData() {
         val prefs = context.getSharedPreferences(WidgetConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val json = prefs.getString(WidgetConstants.KEY_PLANTS, "[]") ?: "[]"
+        // Filter by "due by end of local today" at render time so the widget
+        // stays correct across the midnight rollover without needing JS to refire.
+        val endOfToday = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }.timeInMillis
         val result = mutableListOf<WidgetPlant>()
         try {
             val arr = JSONArray(json)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
-                result.add(WidgetPlant(id = obj.getString("id"), name = obj.getString("name")))
+                // Default 0L so legacy snapshots without the field still render.
+                val nextReminder = obj.optLong("nextReminder", 0L)
+                if (nextReminder <= endOfToday) {
+                    result.add(
+                        WidgetPlant(
+                            id = obj.getString("id"),
+                            name = obj.getString("name"),
+                            nextReminder = nextReminder,
+                        ),
+                    )
+                }
             }
         } catch (_: Exception) {}
+        result.sortBy { it.nextReminder }
         plants = result
     }
 }
