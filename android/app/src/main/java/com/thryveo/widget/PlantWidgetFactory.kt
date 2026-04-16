@@ -33,10 +33,14 @@ class PlantWidgetFactory(
         val rv = RemoteViews(context.packageName, R.layout.widget_plant_item)
         rv.setTextViewText(R.id.plant_name_text, plant.name)
 
+        // Always set all visual properties explicitly — recycled views retain stale state
+        // from their previous render if properties are only set in one branch.
         if (plant.dimmed) {
-            // Gray out text and fade the water button for upcoming (not-yet-due) plants
             rv.setTextColor(R.id.plant_name_text, Color.parseColor("#999999"))
             rv.setFloat(R.id.water_button, "setAlpha", 0.35f)
+        } else {
+            rv.setTextColor(R.id.plant_name_text, Color.parseColor("#111111"))
+            rv.setFloat(R.id.water_button, "setAlpha", 1.0f)
         }
 
         // Tapping the row opens the plant detail screen (works for both normal and dimmed)
@@ -46,14 +50,18 @@ class PlantWidgetFactory(
         }
         rv.setOnClickFillInIntent(R.id.item_root, openFillIn)
 
-        // Water button only wired for today's due plants
-        if (!plant.dimmed) {
-            val waterFillIn = Intent().apply {
+        // Always wire the water button — empty Intent for dimmed items so that
+        // WaterPlantReceiver.onReceive() returns early (action extra is null) without
+        // accidentally watering a plant on a recycled view that had a live intent before.
+        val waterFillIn = if (!plant.dimmed) {
+            Intent().apply {
                 putExtra(WidgetConstants.EXTRA_ACTION, WidgetConstants.ACTION_WATER)
                 putExtra(WidgetConstants.EXTRA_PLANT_ID, plant.id)
             }
-            rv.setOnClickFillInIntent(R.id.water_button, waterFillIn)
+        } else {
+            Intent()  // no extras → WaterPlantReceiver returns early
         }
+        rv.setOnClickFillInIntent(R.id.water_button, waterFillIn)
 
         return rv
     }
