@@ -10,8 +10,6 @@ import android.widget.RemoteViews
 import com.thryveo.MainActivity
 import com.thryveo.R
 import com.thryveo.WidgetSyncScheduler
-import java.util.Calendar
-import org.json.JSONArray
 
 class PlantWidget : AppWidgetProvider() {
 
@@ -63,13 +61,14 @@ class PlantWidget : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.widget_plants)
 
-            // Show "✓ Watered!" in the header briefly after a plant is watered,
-            // otherwise show "Water Today" / "Tomorrow" / "In N days" based on plant data.
+            // Show "✓ Watered!" briefly after watering, otherwise show the label
+            // that loadData() computed and stored in KEY_HEADER_LABEL. Using the
+            // stored value guarantees the header always matches the list content.
             val justWatered = prefs.getBoolean(WidgetConstants.KEY_JUST_WATERED, false)
-            val plantsJson = prefs.getString(WidgetConstants.KEY_PLANTS, "[]") ?: "[]"
+            val headerLabel = prefs.getString(WidgetConstants.KEY_HEADER_LABEL, "💧 Water Today") ?: "💧 Water Today"
             views.setTextViewText(
                 R.id.widget_header,
-                if (justWatered) "✓ Watered!" else computeHeaderLabel(plantsJson),
+                if (justWatered) "✓ Watered!" else headerLabel,
             )
 
             // Set up remote adapter for the scrollable list
@@ -106,48 +105,5 @@ class PlantWidget : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
-        /**
-         * Compute the widget header label from the raw plant JSON stored in SharedPreferences.
-         * Returns "💧 Water Today" if any plant is due today, "💧 Tomorrow" if the next due date
-         * is tomorrow, or "💧 In N days" for anything further out.
-         */
-        private fun computeHeaderLabel(json: String): String {
-            val endOfToday = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
-                set(Calendar.MILLISECOND, 999)
-            }.timeInMillis
-            val startOfToday = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-            return try {
-                val arr = JSONArray(json)
-                var minUpcoming = Long.MAX_VALUE
-                for (i in 0 until arr.length()) {
-                    val r = arr.getJSONObject(i).optLong("nextReminder", 0L)
-                    if (r <= 0L) continue
-                    if (r <= endOfToday) return "💧 Water Today"
-                    if (r < minUpcoming) minUpcoming = r
-                }
-                if (minUpcoming == Long.MAX_VALUE) return "💧 Water Today"
-                val nextDayStart = Calendar.getInstance().apply {
-                    timeInMillis = minUpcoming
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }.timeInMillis
-                val daysAway = ((nextDayStart - startOfToday) / 86_400_000L).toInt()
-                when {
-                    daysAway <= 0 -> "💧 Water Today"
-                    daysAway == 1 -> "💧 Tomorrow"
-                    else -> "💧 In $daysAway days"
-                }
-            } catch (_: Exception) { "💧 Water Today" }
-        }
     }
 }

@@ -1,5 +1,7 @@
 package com.thryveo.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -22,6 +24,14 @@ class PlantWidgetFactory(
 
     override fun onDataSetChanged() {
         loadData()
+        // Refresh the header immediately after data loads so the label always
+        // matches what the list is about to display. updateAppWidget reads
+        // KEY_HEADER_LABEL which was just written by loadData().
+        val manager = AppWidgetManager.getInstance(context)
+        val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
+        if (ids.isNotEmpty()) {
+            for (id in ids) PlantWidget.updateAppWidget(context, manager, id)
+        }
     }
 
     override fun onDestroy() {}
@@ -78,11 +88,18 @@ class PlantWidgetFactory(
         val prefs = context.getSharedPreferences(WidgetConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val json = prefs.getString(WidgetConstants.KEY_PLANTS, "[]") ?: "[]"
 
-        val endOfToday = Calendar.getInstance().apply {
+        val today = Calendar.getInstance()
+        val endOfToday = (today.clone() as Calendar).apply {
             set(Calendar.HOUR_OF_DAY, 23)
             set(Calendar.MINUTE, 59)
             set(Calendar.SECOND, 59)
             set(Calendar.MILLISECOND, 999)
+        }.timeInMillis
+        val startOfToday = (today.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 
         val all = mutableListOf<WidgetPlant>()
@@ -91,34 +108,49 @@ class PlantWidgetFactory(
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
                 val r = obj.optLong("nextReminder", 0L)
-                // Default 0L so legacy snapshots without the field still render.
                 if (r > 0L) {
                     all.add(WidgetPlant(id = obj.getString("id"), name = obj.getString("name"), nextReminder = r))
                 }
             }
         } catch (_: Exception) {}
 
-        // Show today's due plants if any
+        // Determine what to show and derive the matching header label in one pass.
         val dueToday = all.filter { it.nextReminder <= endOfToday }
+        val headerLabel: String
         if (dueToday.isNotEmpty()) {
             plants = dueToday.sortedBy { it.nextReminder }
-            return
+            headerLabel = "💧 Water Today"
+        } else {
+            val upcoming = all.filter { it.nextReminder > endOfToday }
+            if (upcoming.isEmpty()) {
+                plants = emptyList()
+                headerLabel = "💧 Water Today"
+            } else {
+                val nextMs = upcoming.minOf { it.nextReminder }
+                val nextCal = Calendar.getInstance().apply { timeInMillis = nextMs }
+                val nextYear = nextCal.get(Calendar.YEAR)
+                val nextDoy = nextCal.get(Calendar.DAY_OF_YEAR)
+                plants = upcoming.filter {
+                    val c = Calendar.getInstance().apply { timeInMillis = it.nextReminder }
+                    c.get(Calendar.YEAR) == nextYear && c.get(Calendar.DAY_OF_YEAR) == nextDoy
+                }.map { it.copy(dimmed = true) }.sortedBy { it.nextReminder }
+
+                val nextDayStart = Calendar.getInstance().apply {
+                    timeInMillis = nextMs
+                    set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                val daysAway = ((nextDayStart - startOfToday) / 86_400_000L).toInt()
+                headerLabel = when {
+                    daysAway <= 0 -> "💧 Water Today"
+                    daysAway == 1 -> "💧 Tomorrow"
+                    else -> "💧 In $daysAway days"
+                }
+            }
         }
 
-        // Nothing due today — find the next upcoming calendar date and show those grayed out
-        val upcoming = all.filter { it.nextReminder > endOfToday }
-        if (upcoming.isEmpty()) {
-            plants = emptyList()
-            return
-        }
-
-        val nextMs = upcoming.minOf { it.nextReminder }
-        val nextCal = Calendar.getInstance().apply { timeInMillis = nextMs }
-        val nextYear = nextCal.get(Calendar.YEAR)
-        val nextDoy = nextCal.get(Calendar.DAY_OF_YEAR)
-        plants = upcoming.filter {
-            val c = Calendar.getInstance().apply { timeInMillis = it.nextReminder }
-            c.get(Calendar.YEAR) == nextYear && c.get(Calendar.DAY_OF_YEAR) == nextDoy
-        }.map { it.copy(dimmed = true) }.sortedBy { it.nextReminder }
+        // Persist the label so updateAppWidget() always reads a value that matches
+        // what the list is showing — eliminating any race between the two.
+        prefs.edit().putString(WidgetConstants.KEY_HEADER_LABEL, headerLabel).apply()
     }
 }

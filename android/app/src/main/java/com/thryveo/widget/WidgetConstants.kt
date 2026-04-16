@@ -11,4 +11,5 @@ object WidgetConstants {
     const val ACTION_WATER = "water"
     const val ACTION_OPEN = "open"
     const val ACTION_CLEANUP = "cleanup"
+    const val KEY_HEADER_LABEL = "header_label"  // written by loadData, read by updateAppWidget
 }
