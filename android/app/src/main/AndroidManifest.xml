@@ -40,6 +40,20 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="thryveo" android:host="plant" />
         </intent-filter>
+        <!-- Deep link from email confirmation: thryveo://confirm#access_token=...&type=signup -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="thryveo" android:host="confirm" />
+        </intent-filter>
+        <!-- Deep link from password-reset email: thryveo://reset-password#access_token=...&type=recovery -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="thryveo" android:host="reset-password" />
+        </intent-filter>
       </activity>
       <provider
         android:name="androidx.core.content.FileProvider"

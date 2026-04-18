@@ -66,6 +66,29 @@ class WidgetDataModule(reactContext: ReactApplicationContext) :
     }
 
     /**
+     * Called from JS when the user signs in or out. Updates the logged-in flag
+     * and refreshes all widget instances so they switch between the plant list
+     * and the sign-in prompt immediately.
+     */
+    @ReactMethod
+    fun setLoggedIn(loggedIn: Boolean, promise: Promise) {
+        try {
+            val ctx = reactApplicationContext
+            ctx.getSharedPreferences(WidgetConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(WidgetConstants.KEY_LOGGED_IN, loggedIn)
+                .apply()
+
+            val manager = AppWidgetManager.getInstance(ctx)
+            val ids = manager.getAppWidgetIds(ComponentName(ctx, PlantWidget::class.java))
+            for (id in ids) PlantWidget.updateAppWidget(ctx, manager, id)
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("WIDGET_ERROR", e.message, e)
+        }
+    }
+
+    /**
      * Called from JS to retrieve and clear any waterings that were performed
      * directly from the widget while the app was not running.
      * Returns JSON: [{"plantId":"...","timestamp":12345}, ...]

@@ -28,6 +28,18 @@ export async function syncWidget(): Promise<void> {
 }
 
 /**
+ * Tells the widget whether a user is signed in.
+ * When false the widget shows a "Sign in" prompt instead of the plant list.
+ * Call this whenever the session changes (sign-in, sign-out, app start).
+ */
+export async function setWidgetLoggedIn(loggedIn: boolean): Promise<void> {
+  if (Platform.OS !== 'android' || !WidgetData) {
+    return;
+  }
+  await WidgetData.setLoggedIn(loggedIn);
+}
+
+/**
  * Tells the widget to show/hide the "force update required" blocked state.
  * Pass true when an update is required, false to restore normal widget.
  */

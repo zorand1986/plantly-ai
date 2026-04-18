@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {useAuth} from '../utils/auth';
 import {writeFile, CachesDirectoryPath} from 'react-native-fs';
 import {NativeModules, Platform, Share, Switch} from 'react-native';
 import {getLastAutoBackupDate} from '../utils/autoBackup';
@@ -244,7 +245,8 @@ const dayRowStyles = StyleSheet.create({
 // ── main screen ───────────────────────────────────────────────────────────────
 
 export const SettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const {user, signOut} = useAuth();
   const [settings, setSettings] = useState<AppSettings>({
     notificationHour: 9,
     notificationMinute: 0,
@@ -593,6 +595,74 @@ export const SettingsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* ── Account ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Account</Text>
+          {user ? (
+            <>
+              <Text style={styles.cardSubtitle}>
+                Signed in as{' '}
+                <Text style={{color: '#111111', fontWeight: '600'}}>
+                  {user.user_metadata?.full_name
+                    ? `${user.user_metadata.full_name} (${user.email})`
+                    : user.email}
+                </Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.rowButton}
+                onPress={() =>
+                  Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+                    {text: 'Cancel', style: 'cancel'},
+                    {
+                      text: 'Sign Out',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await signOut();
+                        } catch {
+                          Alert.alert('Error', 'Could not sign out. Please try again.');
+                        }
+                      },
+                    },
+                  ])
+                }
+                activeOpacity={0.8}>
+                <Text style={styles.rowButtonEmoji}>🚪</Text>
+                <View style={styles.rowTextWrap}>
+                  <Text style={styles.rowTitle}>Sign Out</Text>
+                  <Text style={styles.rowSub}>You can sign back in at any time</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.cardSubtitle}>
+                Sign in to back up your plants and access them on any device.
+              </Text>
+              <TouchableOpacity
+                style={styles.rowButton}
+                onPress={() => navigation.navigate('SignIn')}
+                activeOpacity={0.8}>
+                <Text style={styles.rowButtonEmoji}>👤</Text>
+                <View style={styles.rowTextWrap}>
+                  <Text style={styles.rowTitle}>Sign In</Text>
+                  <Text style={styles.rowSub}>Log in to your account</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.rowButton}
+                onPress={() => navigation.navigate('SignUp')}
+                activeOpacity={0.8}>
+                <Text style={styles.rowButtonEmoji}>🌱</Text>
+                <View style={styles.rowTextWrap}>
+                  <Text style={styles.rowTitle}>Create Account</Text>
+                  <Text style={styles.rowSub}>Free — no credit card required</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
 
         <Text style={styles.versionText}>v{appVersion}</Text>
       </ScrollView>

@@ -40,6 +40,25 @@ class PlantWidget : AppWidgetProvider() {
             appWidgetId: Int,
         ) {
             val prefs = context.getSharedPreferences(WidgetConstants.PREFS_NAME, Context.MODE_PRIVATE)
+
+            // Default true so existing installs before this key was introduced keep working.
+            val loggedIn = prefs.getBoolean(WidgetConstants.KEY_LOGGED_IN, true)
+            if (!loggedIn) {
+                val views = RemoteViews(context.packageName, R.layout.widget_sign_in)
+                val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val openAppPendingIntent = PendingIntent.getActivity(
+                    context,
+                    0,
+                    openAppIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                views.setOnClickPendingIntent(R.id.widget_sign_in_root, openAppPendingIntent)
+                appWidgetManager.updateAppWidget(appWidgetId, views)
+                return
+            }
+
             val forceUpdateRequired = prefs.getBoolean(WidgetConstants.KEY_FORCE_UPDATE, false)
 
             if (forceUpdateRequired) {

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {AppState, AppStateStatus, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {ActivityIndicator, AppState, AppStateStatus, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -22,11 +22,13 @@ const MenuIcon: React.FC = () => (
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const [plants, setPlants] = useState<Plant[]>([]);
+  const [plantsLoading, setPlantsLoading] = useState(true);
 
   const loadPlants = useCallback(async () => {
     const data = await getPlants();
     data.sort((a, b) => a.nextReminder - b.nextReminder);
     setPlants(data);
+    setPlantsLoading(false);
   }, []);
 
   const syncAndLoad = useCallback(() => {
@@ -87,7 +89,11 @@ export const HomeScreen: React.FC = () => {
         </View>
       </View>
 
-      {plants.length === 0 ? (
+      {plantsLoading ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color="#1A1A1A" />
+        </View>
+      ) : plants.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>🪴</Text>
           <Text style={styles.emptyTitle}>No plants yet</Text>

@@ -12,4 +12,5 @@ object WidgetConstants {
     const val ACTION_OPEN = "open"
     const val ACTION_CLEANUP = "cleanup"
     const val KEY_HEADER_LABEL = "header_label"  // written by loadData, read by updateAppWidget
+    const val KEY_LOGGED_IN = "logged_in"        // false → show sign-in layout
 }
