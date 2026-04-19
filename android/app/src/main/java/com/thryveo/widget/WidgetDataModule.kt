@@ -8,6 +8,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.thryveo.R
+import com.thryveo.WidgetSyncScheduler
 
 class WidgetDataModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -30,6 +31,13 @@ class WidgetDataModule(reactContext: ReactApplicationContext) :
                 .putBoolean(WidgetConstants.KEY_FORCE_UPDATE, false)
                 .putBoolean(WidgetConstants.KEY_JUST_WATERED, false)
                 .apply()
+
+            // Re-arm the midnight alarm every time JS syncs the widget. This self-heals
+            // the alarm chain if it was broken by an app update (Android clears all
+            // AlarmManager alarms when the package is replaced). MY_PACKAGE_REPLACED
+            // handles the immediate re-arm; this covers any edge case where that
+            // broadcast was missed (e.g. the widget had not yet been added at update time).
+            WidgetSyncScheduler.schedule(ctx)
 
             val manager = AppWidgetManager.getInstance(ctx)
             val ids = manager.getAppWidgetIds(ComponentName(ctx, PlantWidget::class.java))
