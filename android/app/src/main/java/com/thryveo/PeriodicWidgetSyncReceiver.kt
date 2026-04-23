@@ -6,7 +6,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import com.facebook.react.HeadlessJsTaskService
-import com.thryveo.R
 import com.thryveo.widget.PlantWidget
 
 /**
@@ -28,8 +27,9 @@ class PeriodicWidgetSyncReceiver : BroadcastReceiver() {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
             if (ids.isNotEmpty()) {
+                // updateAppWidget() calls notifyAppWidgetViewDataChanged internally so
+                // PlantWidgetFactory.onDataSetChanged() fires with the current date.
                 for (id in ids) PlantWidget.updateAppWidget(context, manager, id)
-                manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
             }
         } catch (_: Exception) {}
 

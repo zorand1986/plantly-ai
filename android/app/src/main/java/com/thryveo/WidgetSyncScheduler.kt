@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import java.util.Calendar
 
 /**
@@ -18,11 +19,16 @@ object WidgetSyncScheduler {
     fun schedule(context: Context) {
         try {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                nextAlignedTrigger(),
-                buildPendingIntent(context),
-            )
+            val triggerAtMs = nextAlignedTrigger()
+            val pi = buildPendingIntent(context)
+            // On Android 12+ (API 31), setExactAndAllowWhileIdle requires SCHEDULE_EXACT_ALARM
+            // permission which may not be granted. Fall back to setAndAllowWhileIdle so the
+            // alarm still fires in Doze mode — just not at the exact millisecond.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pi)
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pi)
+            }
         } catch (_: Exception) {}
     }
 

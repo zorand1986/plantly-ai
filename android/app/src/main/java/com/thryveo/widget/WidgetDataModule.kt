@@ -42,8 +42,8 @@ class WidgetDataModule(reactContext: ReactApplicationContext) :
             val manager = AppWidgetManager.getInstance(ctx)
             val ids = manager.getAppWidgetIds(ComponentName(ctx, PlantWidget::class.java))
             if (ids.isNotEmpty()) {
+                // updateAppWidget() calls notifyAppWidgetViewDataChanged internally.
                 for (id in ids) PlantWidget.updateAppWidget(ctx, manager, id)
-                manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
             }
             promise.resolve(null)
         } catch (e: Exception) {

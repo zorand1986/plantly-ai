@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import com.thryveo.R
 
 /**
  * Triggers a widget redraw when the system date, time, or timezone changes.
@@ -18,7 +17,7 @@ class DateChangeReceiver : BroadcastReceiver() {
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
         if (ids.isEmpty()) return
+        // updateAppWidget() calls notifyAppWidgetViewDataChanged internally.
         for (id in ids) PlantWidget.updateAppWidget(context, manager, id)
-        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
     }
 }

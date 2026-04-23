@@ -67,11 +67,11 @@ class WaterPlantReceiver : BroadcastReceiver() {
             } catch (_: Exception) { /* non-critical — plant data is already recorded */ }
         }
 
-        // Refresh the full widget so the header shows "✓ Watered!" and the list updates
+        // Refresh the full widget — updateAppWidget() calls notifyAppWidgetViewDataChanged
+        // internally so the list also refreshes to remove the just-watered plant.
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
         for (id in ids) PlantWidget.updateAppWidget(context, manager, id)
-        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
 
         // Reset the "watered" header back to normal after 2.5 seconds
         val cleanupIntent = Intent(context, WaterPlantReceiver::class.java).apply {

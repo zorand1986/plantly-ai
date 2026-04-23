@@ -24,13 +24,13 @@ class PlantWidgetFactory(
 
     override fun onDataSetChanged() {
         loadData()
-        // Refresh the header immediately after data loads so the label always
-        // matches what the list is about to display. updateAppWidget reads
-        // KEY_HEADER_LABEL which was just written by loadData().
+        // Refresh the header so it matches the newly computed list.
+        // notifyList=false prevents updateAppWidget() from calling notifyAppWidgetViewDataChanged
+        // again, which would trigger onDataSetChanged() in an infinite loop.
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(ComponentName(context, PlantWidget::class.java))
         if (ids.isNotEmpty()) {
-            for (id in ids) PlantWidget.updateAppWidget(context, manager, id)
+            for (id in ids) PlantWidget.updateAppWidget(context, manager, id, notifyList = false)
         }
     }
 
@@ -149,8 +149,8 @@ class PlantWidgetFactory(
             }
         }
 
-        // Persist the label so updateAppWidget() always reads a value that matches
-        // what the list is showing — eliminating any race between the two.
-        prefs.edit().putString(WidgetConstants.KEY_HEADER_LABEL, headerLabel).apply()
+        // headerLabel computed above is intentionally not persisted to SharedPreferences.
+        // PlantWidget.computeHeaderLabel() re-derives it fresh from KEY_PLANTS on every
+        // updateAppWidget() call so the header is always correct at the time of rendering.
     }
 }
