@@ -98,8 +98,14 @@ export const HomeScreen: React.FC = () => {
           <Text style={styles.emptyEmoji}>🪴</Text>
           <Text style={styles.emptyTitle}>No plants yet</Text>
           <Text style={styles.emptySubtitle}>
-            Tap "Add" to track your first plant
+            Start tracking your plant watering schedule
           </Text>
+          <TouchableOpacity
+            style={styles.emptyAddButton}
+            onPress={() => navigation.navigate('AddPlant')}
+            activeOpacity={0.8}>
+            <Text style={styles.emptyAddButtonText}>+ Add your first plant</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -200,5 +206,18 @@ const styles = StyleSheet.create({
     color: '#999999',
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  emptyAddButton: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginTop: 20,
+  },
+  emptyAddButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 15,
+    letterSpacing: 0.2,
   },
 });
