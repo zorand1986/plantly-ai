@@ -83,6 +83,9 @@ export interface Plant {
    *  Used to prevent duplicate notifications for the same reminder period. */
   notifiedForReminder?: number;
   wateringHistory: number[]; // array of timestamps when plant was watered
+  /** When the plant was first added. Used to determine seniority when enforcing
+   *  free-plan limits. Optional for backward compatibility with existing plants. */
+  createdAt?: number;
 }
 
 export async function getPlants(): Promise<Plant[]> {
@@ -103,6 +106,7 @@ export async function addPlant(plant: Plant): Promise<void> {
   // Initialize wateringHistory if not present
   const plantWithHistory = {
     ...plant,
+    createdAt: plant.createdAt ?? Date.now(),
     wateringHistory: plant.wateringHistory || [],
   };
   plants.push(plantWithHistory);

@@ -85,6 +85,7 @@ export const AddPlantScreen: React.FC = () => {
         lastWatered: now,
         nextReminder,
         wateringHistory: [now],
+        createdAt: now,
       };
 
       const notificationId = await scheduleNotification(plant);
