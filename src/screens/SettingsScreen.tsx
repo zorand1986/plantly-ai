@@ -261,18 +261,42 @@ export const SettingsScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastAnim = useRef(new Animated.Value(-100)).current;
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const chevronAnim = useRef(new Animated.Value(0)).current;
+  const chevronRotate = chevronAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
 
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    setToastVisible(true);
-    toastAnim.setValue(-100);
-    Animated.timing(toastAnim, {toValue: 0, duration: 300, useNativeDriver: true}).start();
-    setTimeout(() => {
-      Animated.timing(toastAnim, {toValue: -100, duration: 300, useNativeDriver: true}).start(
-        () => setToastVisible(false),
-      );
-    }, 2500);
-  }, [toastAnim]);
+  const toggleAdvanced = useCallback(() => {
+    Animated.timing(chevronAnim, {
+      toValue: advancedOpen ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    setAdvancedOpen(prev => !prev);
+  }, [advancedOpen, chevronAnim]);
+
+  const showToast = useCallback(
+    (message: string) => {
+      setToastMessage(message);
+      setToastVisible(true);
+      toastAnim.setValue(-100);
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      setTimeout(() => {
+        Animated.timing(toastAnim, {
+          toValue: -100,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => setToastVisible(false));
+      }, 2500);
+    },
+    [toastAnim],
+  );
 
   const handleTitlePress = useCallback(() => {
     const now = Date.now();
@@ -322,10 +346,16 @@ export const SettingsScreen: React.FC = () => {
     try {
       const json: string = await FilePicker.pickJsonFile();
       await importAllData(json);
-      Alert.alert('Success', 'Data imported! Please restart the app to see your plants.');
+      Alert.alert(
+        'Success',
+        'Data imported! Please restart the app to see your plants.',
+      );
     } catch (e: any) {
       if (e?.code !== 'CANCELLED') {
-        Alert.alert('Error', 'Could not read the selected file. Make sure it is a valid Thryveo backup.');
+        Alert.alert(
+          'Error',
+          'Could not read the selected file. Make sure it is a valid Thryveo backup.',
+        );
       }
     }
   };
@@ -455,6 +485,50 @@ export const SettingsScreen: React.FC = () => {
             {formatTime(settings.notificationHour, settings.notificationMinute)}
           </Text>
 
+          {/* ── Advanced toggle (inside card) ── */}
+          <TouchableOpacity
+            style={styles.advancedToggle}
+            onPress={toggleAdvanced}
+            activeOpacity={0.7}>
+            <Text style={styles.advancedToggleText}>Advanced</Text>
+            <Animated.View style={{transform: [{rotate: chevronRotate}]}}>
+              <View style={styles.chevron} />
+            </Animated.View>
+          </TouchableOpacity>
+
+          {/* ── Per-day schedule (collapsible) ── */}
+          {advancedOpen && (
+            <>
+              <Text style={styles.cardSubtitle}>
+                Override the notification time for specific days of the week.
+              </Text>
+              {DAY_ORDER.map(day => (
+                <DayRow
+                  key={day}
+                  day={day}
+                  override={settings.dayOverrides?.[day] ?? null}
+                  defaultHour={settings.notificationHour}
+                  defaultMinute={settings.notificationMinute}
+                  onChange={v => {
+                    const next = [
+                      ...(settings.dayOverrides ?? [
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                      ]),
+                    ];
+                    next[day] = v;
+                    setSettings(s => ({...s, dayOverrides: next}));
+                  }}
+                />
+              ))}
+            </>
+          )}
+
           <TouchableOpacity
             style={[styles.primaryButton, saved && styles.primaryButtonSaved]}
             onPress={handleSaveDefaultTime}
@@ -465,33 +539,20 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* ── Per-day schedule ── */}
+        {/* ── Feedback ── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Per-Day Schedule</Text>
-          <Text style={styles.cardSubtitle}>
-            Override the notification time for specific days of the week.
-          </Text>
-          {DAY_ORDER.map(day => (
-            <DayRow
-              key={day}
-              day={day}
-              override={settings.dayOverrides?.[day] ?? null}
-              defaultHour={settings.notificationHour}
-              defaultMinute={settings.notificationMinute}
-              onChange={v => {
-                const next = [...(settings.dayOverrides ?? [null, null, null, null, null, null, null])];
-                next[day] = v;
-                setSettings(s => ({...s, dayOverrides: next}));
-              }}
-            />
-          ))}
+          <Text style={styles.cardTitle}>Feedback</Text>
           <TouchableOpacity
-            style={[styles.primaryButton, saved && styles.primaryButtonSaved]}
-            onPress={handleSaveDefaultTime}
+            style={styles.rowButton}
+            onPress={() => navigation.navigate('Feedback')}
             activeOpacity={0.8}>
-            <Text style={styles.primaryButtonText}>
-              {saved ? 'Saved!' : 'Save & Reschedule All'}
-            </Text>
+            <Text style={styles.rowButtonEmoji}>✉️</Text>
+            <View style={styles.rowTextWrap}>
+              <Text style={styles.rowTitle}>
+                Report a problem or give feedback
+              </Text>
+              <Text style={styles.rowSub}>Goes directly to the developer</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -506,7 +567,9 @@ export const SettingsScreen: React.FC = () => {
             <View style={styles.rowTextWrap}>
               <Text style={styles.rowTitle}>Auto Backup</Text>
               <Text style={styles.rowSub}>
-                {lastBackupDate ? `Last backup: ${lastBackupDate}` : 'Backs up once a day on first open'}
+                {lastBackupDate
+                  ? `Last backup: ${lastBackupDate}`
+                  : 'Backs up once a day on first open'}
               </Text>
             </View>
             <Switch
@@ -535,7 +598,9 @@ export const SettingsScreen: React.FC = () => {
             <Text style={styles.rowButtonEmoji}>📥</Text>
             <View style={styles.rowTextWrap}>
               <Text style={styles.rowTitle}>Import Data</Text>
-              <Text style={styles.rowSub}>Reads thryveo-backup.json from Downloads</Text>
+              <Text style={styles.rowSub}>
+                Reads thryveo-backup.json from Downloads
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -612,26 +677,35 @@ export const SettingsScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.rowButton}
                 onPress={() =>
-                  Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-                    {text: 'Cancel', style: 'cancel'},
-                    {
-                      text: 'Sign Out',
-                      style: 'destructive',
-                      onPress: async () => {
-                        try {
-                          await signOut();
-                        } catch {
-                          Alert.alert('Error', 'Could not sign out. Please try again.');
-                        }
+                  Alert.alert(
+                    'Sign Out',
+                    'Are you sure you want to sign out?',
+                    [
+                      {text: 'Cancel', style: 'cancel'},
+                      {
+                        text: 'Sign Out',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await signOut();
+                          } catch {
+                            Alert.alert(
+                              'Error',
+                              'Could not sign out. Please try again.',
+                            );
+                          }
+                        },
                       },
-                    },
-                  ])
+                    ],
+                  )
                 }
                 activeOpacity={0.8}>
                 <Text style={styles.rowButtonEmoji}>🚪</Text>
                 <View style={styles.rowTextWrap}>
                   <Text style={styles.rowTitle}>Sign Out</Text>
-                  <Text style={styles.rowSub}>You can sign back in at any time</Text>
+                  <Text style={styles.rowSub}>
+                    You can sign back in at any time
+                  </Text>
                 </View>
               </TouchableOpacity>
             </>
@@ -657,7 +731,9 @@ export const SettingsScreen: React.FC = () => {
                 <Text style={styles.rowButtonEmoji}>🌱</Text>
                 <View style={styles.rowTextWrap}>
                   <Text style={styles.rowTitle}>Create Account</Text>
-                  <Text style={styles.rowSub}>Free — no credit card required</Text>
+                  <Text style={styles.rowSub}>
+                    Free — no credit card required
+                  </Text>
                 </View>
               </TouchableOpacity>
             </>
@@ -806,5 +882,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#CCCCCC',
     marginTop: 4,
+  },
+  advancedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingVertical: 12,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    marginBottom: 8,
+  },
+  advancedToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#999999',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  chevron: {
+    width: 10,
+    height: 10,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: '#999999',
+    transform: [{rotate: '45deg'}],
+    marginBottom: 4,
   },
 });

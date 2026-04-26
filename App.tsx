@@ -13,6 +13,7 @@ import {AddPlantScreen} from './src/screens/AddPlantScreen';
 import {PlantDetailScreen} from './src/screens/PlantDetailScreen';
 import {SettingsScreen} from './src/screens/SettingsScreen';
 import {SupportScreen} from './src/screens/SupportScreen';
+import {FeedbackScreen} from './src/screens/FeedbackScreen';
 import {SignInScreen} from './src/screens/auth/SignInScreen';
 import {SignUpScreen} from './src/screens/auth/SignUpScreen';
 import {ForgotPasswordScreen} from './src/screens/auth/ForgotPasswordScreen';
@@ -38,6 +39,7 @@ export type RootStackParamList = {
   PlantDetail: {plantId: string};
   Settings: undefined;
   Support: undefined;
+  Feedback: undefined;
   SetNewPassword: undefined;
   // Auth screens
   SignIn: undefined;
@@ -241,6 +243,11 @@ function AppNavigator(): React.JSX.Element {
                 name="Support"
                 component={SupportScreen}
                 options={{title: 'Support'}}
+              />
+              <Stack.Screen
+                name="Feedback"
+                component={FeedbackScreen}
+                options={{title: 'Feedback'}}
               />
               <Stack.Screen
                 name="SetNewPassword"
